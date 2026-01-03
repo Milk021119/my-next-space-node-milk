@@ -8,68 +8,13 @@ import PostSkeleton from '@/components/PostSkeleton';
 import ParallaxImage from '@/components/ParallaxImage'; 
 import Link from 'next/link'; 
 import { format } from 'date-fns';
-import { Heart, Terminal, MessageSquare } from 'lucide-react'; 
+import { Heart, Terminal } from 'lucide-react'; 
 import React, { useState, useEffect } from 'react';
 
 const ANIME_COVERS = ["/covers/cimgtwjgu000szrs56jyqr0mg.1200.jpg", "/covers/cit9ejr5100c6z35nrc61fd7j.1200.jpg", "/covers/ciuur1ym5000cbsjb09bof78s.1200.jpg", "/covers/claodyl1v0068m78hgrbs3myq.2160p.jpg", "/covers/clba9t5hw007qm78hd3cocnrm.2160p.jpg", "/covers/clbihqun3007ym78h7rsq6cda.2160p.jpg", "/covers/clc7emns2000w6v8hdu5d1k17.2160p.jpg", "/covers/cm7rftv17000hkl8h1gjn9e1v.2160p.jpg", "/covers/cm9lnaup3001ikl8h044j19za.2160p.jpg", "/covers/cm9za5ads001skl8h125v2zrw.2160p.jpg", "/covers/cmabaj7od001xkl8hbdm96tlk.2160p.jpg", "/covers/cmatsfxm100041k8h93jd61z7.2160p.jpg", "/covers/cmbmb7mr3000f1k8hefiqenx7.2160p.jpg", "/covers/cmju6k1jb00168w8hcb4pgdnd.2160p.jpg"];
 const getAnimeCover = (id: number) => ANIME_COVERS[id % ANIME_COVERS.length];
 
-interface Comment { id: number; user_email: string; content: string; created_at: string; }
-interface Post { id: number; title: string; content: string; author_email: string; likes: number; created_at: string; tags: string[]; cover_url?: string; type?: string; user_id?: string; } // ✨ 加上 user_id
-
-// --- 评论组件 (含通知逻辑) ---
-const CommentsSection = ({ postId, user, postAuthorId }: { postId: number, user: any, postAuthorId?: string }) => {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => { if (isOpen) fetchComments(); }, [isOpen]);
-
-  async function fetchComments() {
-    const { data } = await supabase.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
-    setComments(data || []);
-  }
-
-  async function handleSend() {
-    if (!newComment.trim() || !user) return;
-    setLoading(true);
-    await supabase.from('comments').insert({ post_id: postId, user_id: user.id, user_email: user.email, content: newComment });
-
-    // ✨ 触发通知：如果不做判断，每个人评论都会发通知；加判断是为了只通知作者
-    if (postAuthorId && user.id !== postAuthorId) {
-      await supabase.from('notifications').insert({
-        recipient_id: postAuthorId,
-        sender_email: user.email,
-        post_id: postId,
-        content: newComment
-      });
-    }
-
-    setNewComment('');
-    fetchComments();
-    setLoading(false);
-  }
-
-  return (
-    <div className="w-full">
-      <button onClick={() => setIsOpen(!isOpen)} className="ml-auto flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-purple-600 transition-colors">
-        <MessageSquare size={12} /><span>{isOpen ? 'Close' : `View Signals`}</span>
-      </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="py-4 space-y-3 mt-2 border-t border-slate-50">
-              {comments.length === 0 && <p className="text-xs text-slate-300 italic">No signals yet...</p>}
-              {comments.map(c => (<div key={c.id} className="bg-slate-50 p-3 rounded-lg text-sm"><div className="flex justify-between items-center mb-1"><span className="text-[10px] font-black text-purple-500 uppercase">{c.user_email?.split('@')[0]}</span><span className="text-[10px] text-slate-300 font-mono">{format(new Date(c.created_at), 'MM/dd')}</span></div><p className="text-slate-600">{c.content}</p></div>))}
-            </div>
-            {user ? (<div className="flex gap-2 mt-4"><input value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Transmit..." className="flex-1 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-xs outline-none focus:border-purple-300 transition-colors"/><button disabled={loading} onClick={handleSend} className="w-16 bg-slate-900 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-purple-600 transition-colors flex items-center justify-center">{loading ? '...' : 'Send'}</button></div>) : null}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+interface Post { id: number; title: string; content: string; author_email: string; likes: number; created_at: string; tags: string[]; cover_url?: string; type?: string; user_id?: string; }
 
 export default function Page() {
   const [user, setUser] = useState<any>(null);
@@ -116,8 +61,11 @@ export default function Page() {
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
       <Sidebar />
 
-      <main className="w-full lg:ml-72 2xl:ml-80 flex-1 min-h-screen transition-all duration-300">
-        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-20 lg:py-24">
+      {/* ✨ 布局调整：w-full lg:ml-72 2xl:ml-80 */}
+      <main className="w-full lg:ml-72 2xl:ml-80 flex-1 py-24 min-h-screen transition-all duration-300">
+        {/* ✨ 内容容器：max-w-5xl + mx-auto + px-6 */}
+        <div className="max-w-5xl mx-auto px-6 lg:px-10">
+          
           <AnimatePresence>
             {user && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-16">
@@ -139,7 +87,6 @@ export default function Page() {
                         const cover_url = (document.getElementById('post-cover') as HTMLInputElement).value;
                         const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()) : [];
                         if(!title || !content) return;
-                        // ✨ 插入时带上 user_id，方便后续发通知
                         await supabase.from('posts').insert([{ title, content, author_email: user.email, user_id: user.id, likes: 0, tags, cover_url, type: 'article' }]);
                         fetchPosts(0, true);
                         (document.getElementById('post-title') as HTMLInputElement).value = "";
@@ -173,9 +120,7 @@ export default function Page() {
                           <Heart size={16} className={(post.likes || 0) > 0 ? 'fill-pink-500 text-pink-500' : ''} />
                           <span className="text-xs font-bold">{post.likes || 0}</span>
                         </button>
-                        <div className="flex-1 ml-4" onClick={(e) => e.preventDefault()}> {/* 阻止冒泡 */}
-                           <CommentsSection postId={post.id} user={user} postAuthorId={post.user_id} />
-                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 group-hover:text-purple-600 flex items-center gap-1">Read Signal <Terminal size={10} /></span>
                       </div>
                     </div>
                   </motion.article>
