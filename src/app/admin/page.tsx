@@ -1,136 +1,273 @@
 "use client";
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Settings, Save, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
+import { 
+  Trash2, Plus, Copy, BarChart3, FileText, Settings, Key, 
+  RefreshCw, LayoutDashboard, Save, Terminal
+} from 'lucide-react';
+import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
-  // 1. 定义一个配置对象，管理多个参数
-  const [config, setConfig] = useState({
-    site_title: '',
-    sidebar_subtext: ''
-  });
-  const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'posts' | 'settings' | 'invites'>('overview');
 
-  // 2. 权限检查：只有登录用户才能访问后台
+  // 数据状态
+  const [stats, setStats] = useState({ posts: 0, moments: 0, comments: 0, likes: 0 });
+  const [posts, setPosts] = useState<any[]>([]);
+  const [codes, setCodes] = useState<any[]>([]);
+  const [settings, setSettings] = useState({ site_title: '', sidebar_subtext: '' });
+
+  // ⚠️ 记得确保这里填的是你的邮箱
+  const ADMIN_EMAIL = 's2285627839@outlook.com';
+
   useEffect(() => {
-    async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        alert("未授权访问！请先从主页面登录。");
-        router.push('/'); // 没登录直接踢回首页
-      } else {
-        setIsAdmin(true);
-        loadSettings();
-      }
-    }
-    checkAuth();
+    checkAdmin();
   }, []);
 
-  // 3. 加载所有设置
-  async function loadSettings() {
-    const { data } = await supabase.from('site_settings').select('*');
-    if (data) {
-      const settingsMap = data.reduce((acc: any, curr: any) => {
-        acc[curr.key] = curr.value;
-        return acc;
-      }, {});
-      setConfig(prev => ({ ...prev, ...settingsMap }));
+  async function checkAdmin() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email === ADMIN_EMAIL) {
+      setIsAdmin(true);
+      fetchStats(); // 初始加载数据
+    } else {
+      setLoading(false);
     }
+  }
+
+  // --- 📡 数据获取 ---
+  async function fetchStats() {
+    setLoading(true);
+    // 1. 统计文章
+    const { count: postCount } = await supabase.from('posts').select('*', { count: 'exact', head: true }).eq('type', 'article');
+    // 2. 统计动态
+    const { count: momentCount } = await supabase.from('posts').select('*', { count: 'exact', head: true }).eq('type', 'moment');
+    // 3. 统计评论
+    const { count: commentCount } = await supabase.from('comments').select('*', { count: 'exact', head: true });
+    
+    setStats({ posts: postCount || 0, moments: momentCount || 0, comments: commentCount || 0, likes: 0 });
+    
+    // 如果当前在其他 tab，顺便加载对应数据
+    if (activeTab === 'posts') fetchPosts();
+    if (activeTab === 'invites') fetchCodes();
+    if (activeTab === 'settings') fetchSettings();
+    
     setLoading(false);
   }
 
-  // 4. 保存所有设置
-  const handleSave = async () => {
-    setIsSaving(true);
-    const updates = Object.entries(config).map(([key, value]) => ({
-      key,
-      value
-    }));
+  async function fetchPosts() {
+    const { data } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(20);
+    setPosts(data || []);
+  }
 
-    const { error } = await supabase
-      .from('site_settings')
-      .upsert(updates);
-    
-    if (!error) alert("CORE: 系统配置已全局重写！");
-    else alert("ERROR: " + error.message);
-    setIsSaving(false);
-  };
+  async function fetchCodes() {
+    const { data } = await supabase.from('invite_codes').select('*').order('created_at', { ascending: false });
+    setCodes(data || []);
+  }
 
-  if (!isAdmin || loading) {
+  async function fetchSettings() {
+    const { data } = await supabase.from('site_settings').select('*');
+    if (data) {
+      const map: any = {};
+      data.forEach((item: any) => map[item.key] = item.value);
+      setSettings({ site_title: map.site_title || '', sidebar_subtext: map.sidebar_subtext || '' });
+    }
+  }
+
+  // --- 🛠️ 操作逻辑 ---
+  async function handleDeletePost(id: number) {
+    if (!confirm('⚠️ 警告：确定要彻底删除这条内容吗？此操作不可恢复！')) return;
+    await supabase.from('posts').delete().eq('id', id);
+    fetchPosts(); // 刷新列表
+  }
+
+  async function handleSaveSettings() {
+    // 这里假设数据库已经有 site_settings 表且有 key 为 site_title 的行
+    // 如果是第一次，你需要手动去数据库 insert 数据
+    await supabase.from('site_settings').update({ value: settings.site_title }).eq('key', 'site_title');
+    await supabase.from('site_settings').update({ value: settings.sidebar_subtext }).eq('key', 'sidebar_subtext');
+    alert('设置已更新！刷新前台页面即可看到变化。');
+  }
+
+  async function generateCode() {
+    const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    await supabase.from('invite_codes').insert([{ code: randomCode }]);
+    fetchCodes();
+  }
+
+  async function deleteCode(id: number) {
+    await supabase.from('invite_codes').delete().eq('id', id);
+    fetchCodes();
+  }
+
+  // --- 🚫 权限拦截 ---
+  if (!isAdmin && !loading) {
     return (
-      <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center text-purple-400 font-mono">
-        <Loader2 className="animate-spin mr-2" /> 正在同步终端权限...
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-red-500 font-mono">
+        <h1 className="text-6xl font-black mb-4">403</h1>
+        <p className="text-xl tracking-widest border-2 border-red-500 px-4 py-2 rounded">ACCESS DENIED</p>
+        <p className="mt-4 text-slate-500 text-sm">System Level: Administrator Only</p>
+        <button onClick={() => router.push('/')} className="mt-8 text-white hover:underline">Exit Terminal</button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a] text-white p-6 md:p-20 font-mono selection:bg-purple-500">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-slate-100 font-sans flex">
+      {/* 侧边导航 */}
+      <aside className="w-64 bg-slate-900 text-white flex flex-col p-6 shadow-2xl z-10">
+        <div className="mb-10 flex items-center gap-3 text-purple-400">
+          <Terminal size={24} />
+          <h1 className="text-xl font-black tracking-widest">ADMIN</h1>
+        </div>
         
-        {/* 顶部标题栏 */}
-        <div className="flex items-center justify-between mb-12 border-b border-purple-500/30 pb-6">
-          <div className="flex items-center space-x-4">
-            <Settings className="text-purple-400 animate-spin-slow" size={32} />
-            <h1 className="text-2xl font-black italic tracking-tighter">ADMIN / 核心控制台</h1>
-          </div>
-          <div className="flex items-center text-[10px] text-green-400 bg-green-400/10 px-3 py-1 rounded-full border border-green-400/20">
-            <ShieldCheck size={12} className="mr-1"/> 系统已授权
-          </div>
-        </div>
+        <nav className="space-y-2 flex-1">
+          {[
+            { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+            { id: 'posts', label: 'Content Manager', icon: FileText },
+            { id: 'settings', label: 'System Config', icon: Settings },
+            { id: 'invites', label: 'Access Keys', icon: Key },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => { setActiveTab(item.id as any); if(item.id !== 'overview') setLoading(true); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                activeTab === item.id ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/50' : 'text-slate-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <item.icon size={18} /> {item.label}
+            </button>
+          ))}
+        </nav>
 
-        {/* 核心配置区 */}
-        <div className="bg-white/5 backdrop-blur-xl rounded-[2rem] p-10 border border-white/10 shadow-2xl space-y-10">
-          
-          {/* 修改主标题 */}
-          <div>
-            <label className="block text-[10px] uppercase tracking-[0.3em] text-purple-400 mb-4 font-black">
-              System Title / 站点主名称
-            </label>
-            <input 
-              value={config.site_title}
-              onChange={(e) => setConfig({...config, site_title: e.target.value})}
-              className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl outline-none focus:border-purple-500 transition-all text-xl font-bold italic"
-              placeholder="e.g. SOYMILK"
-            />
-          </div>
-
-          {/* 修改副标题 */}
-          <div>
-            <label className="block text-[10px] uppercase tracking-[0.3em] text-purple-400 mb-4 font-black">
-              Sub Text / 侧边栏副标题
-            </label>
-            <input 
-              value={config.sidebar_subtext}
-              onChange={(e) => setConfig({...config, sidebar_subtext: e.target.value})}
-              className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl outline-none focus:border-purple-500 transition-all"
-              placeholder="e.g. Digital Frontier"
-            />
-          </div>
-
-          {/* 执行按钮 */}
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className="w-full py-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-2xl font-black text-xs uppercase tracking-[0.4em] flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-xl shadow-purple-500/20"
-          >
-            {isSaving ? <Loader2 className="animate-spin"/> : <Save size={18}/>}
-            <span>{isSaving ? "Writing..." : "Execute Global Update"}</span>
-          </button>
-        </div>
-
-        {/* 返回链接 */}
-        <button 
-          onClick={() => router.push('/')}
-          className="mt-12 flex items-center space-x-2 text-slate-500 hover:text-purple-400 transition-colors group"
-        >
-          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform"/> 
-          <span className="text-xs uppercase font-black">返回主终端系统</span>
+        <button onClick={() => router.push('/')} className="mt-auto flex items-center gap-2 text-slate-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+          <RefreshCw size={14} /> Return to Site
         </button>
+      </aside>
+
+      {/* 主内容区 */}
+      <main className="flex-1 p-10 overflow-y-auto">
+        <header className="mb-8 flex justify-between items-end">
+          <div>
+            <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight">{activeTab}</h2>
+            <p className="text-slate-400 text-sm mt-1">Console Session Active</p>
+          </div>
+          {loading && <RefreshCw className="animate-spin text-purple-500" />}
+        </header>
+
+        {/* 📊 Tab 1: 概览面板 */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard label="Total Articles" value={stats.posts} color="bg-blue-500" icon={FileText} />
+            <StatCard label="Total Moments" value={stats.moments} color="bg-green-500" icon={LayoutDashboard} />
+            <StatCard label="Total Comments" value={stats.comments} color="bg-pink-500" icon={BarChart3} />
+          </div>
+        )}
+
+        {/* 📝 Tab 2: 内容管理 */}
+        {activeTab === 'posts' && (
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-700">Recent Posts (Last 20)</h3>
+              <button onClick={fetchPosts} className="text-xs text-purple-600 font-bold hover:underline">Refresh</button>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {posts.map(post => (
+                <div key={post.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${post.type === 'moment' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                        {post.type || 'Article'}
+                      </span>
+                      <span className="text-xs text-slate-400 font-mono">{format(new Date(post.created_at), 'MM/dd HH:mm')}</span>
+                    </div>
+                    <p className="text-sm font-medium text-slate-800 line-clamp-1">{post.title || post.content}</p>
+                    <p className="text-xs text-slate-400">by {post.author_email}</p>
+                  </div>
+                  <button onClick={() => handleDeletePost(post.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ⚙️ Tab 3: 系统设置 */}
+        {activeTab === 'settings' && (
+          <div className="max-w-xl bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Site Title</label>
+                <input 
+                  value={settings.site_title}
+                  onChange={e => setSettings({...settings, site_title: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-800 outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Sidebar Subtext</label>
+                <input 
+                  value={settings.sidebar_subtext}
+                  onChange={e => setSettings({...settings, sidebar_subtext: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold text-slate-800 outline-none focus:border-purple-500"
+                />
+              </div>
+              <button 
+                onClick={handleSaveSettings}
+                className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold uppercase tracking-widest hover:bg-purple-600 transition-all flex items-center justify-center gap-2"
+              >
+                <Save size={18} /> Save Configurations
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 🔑 Tab 4: 邀请码管理 */}
+        {activeTab === 'invites' && (
+          <div>
+            <button onClick={generateCode} className="mb-6 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-purple-200 transition-all">
+              <Plus size={18} /> Generate New Code
+            </button>
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 border-b border-slate-100 text-xs font-black text-slate-400 uppercase tracking-widest">
+                  <tr><th className="p-4">Code</th><th className="p-4">Status</th><th className="p-4 text-right">Action</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {codes.map(code => (
+                    <tr key={code.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 font-mono font-bold text-slate-700">{code.code}</td>
+                      <td className="p-4"><span className="px-2 py-1 bg-green-100 text-green-600 rounded text-[10px] font-bold uppercase">Active</span></td>
+                      <td className="p-4 text-right">
+                        <button onClick={() => deleteCode(code.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={18} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}
+
+// 简单的统计卡片组件
+function StatCard({ label, value, color, icon: Icon }: any) {
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+      <div className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center text-white shadow-lg opacity-90`}>
+        <Icon size={28} />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className="text-3xl font-black text-slate-800">{value}</p>
       </div>
     </div>
   );
