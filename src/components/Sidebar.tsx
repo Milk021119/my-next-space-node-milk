@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, 
   BookOpen, 
   Coffee, 
   Settings, 
-  UserCircle, // 个人中心图标
+  UserCircle, 
   LogOut, 
   Menu, 
   X,
@@ -19,18 +19,21 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import MiniPlayer from '@/components/player/MiniPlayer'; 
+// ✨ 引入登录弹窗
+import LoginModal from '@/components/LoginModal';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useCurrentUser();
   const [isOpen, setIsOpen] = useState(false);
+  // ✨ 新增：控制登录弹窗的状态
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.reload();
   };
 
-  // ✅ 1. 基础菜单 (前三个)
   const navItems = [
     { name: '首页', path: '/', icon: Home },
     { name: '文章', path: '/posts', icon: BookOpen },
@@ -38,18 +41,17 @@ export default function Sidebar() {
     { name: '信号塔', path: '/chat', icon: Radio },
   ];
 
-  // ✅ 2. 第四个：个人中心 (每个人都有)
-  // 逻辑：如果登录了去 /u/id，没登录去 /auth/login
-  navItems.push({
-    name: '个人中心',
-    path: user ? `/u/${user.id}` : '/auth/login', 
-    icon: UserCircle
-  });
+  // 动态菜单逻辑
+  if (user) {
+    navItems.push({
+      name: '个人中心',
+      path: `/u/${user.id}`, 
+      icon: UserCircle
+    });
+  }
 
-  // ✅ 3. 第五个：后台管理 (仅限管理员)
-  // 权限判断：你的邮箱 OR 数据库 is_admin 字段
+  // 简单的管理员判断
   const isAdmin = user?.email === 's2285627839@outlook.com' || user?.user_metadata?.is_admin === true;
-  
   if (isAdmin) {
     navItems.push({
       name: '后台管理',
@@ -60,7 +62,10 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* 移动端汉堡菜单按钮 */}
+      {/* ✨ 挂载登录弹窗组件 */}
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {/* 移动端汉堡菜单 */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button 
           onClick={() => setIsOpen(!isOpen)} 
@@ -156,15 +161,20 @@ export default function Sidebar() {
                  </button>
               </div>
             ) : (
-              <Link href="/auth/login" className="flex items-center justify-center gap-2 p-3 w-full bg-slate-900 text-white rounded-xl text-xs font-bold uppercase hover:bg-purple-600 transition-colors shadow-lg shadow-slate-900/10">
+              // ✨ 修复：这里不再是 Link，而是 button，点击触发弹窗
+              <button 
+                onClick={() => setIsLoginOpen(true)}
+                className="flex items-center justify-center gap-2 p-3 w-full bg-slate-900 text-white rounded-xl text-xs font-bold uppercase hover:bg-purple-600 transition-colors shadow-lg shadow-slate-900/10"
+              >
                 <User size={16} />
                 <span>登录 / 注册</span>
-              </Link>
+              </button>
             )}
           </div>
         </div>
       </motion.aside>
 
+      {/* 移动端遮罩 */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
