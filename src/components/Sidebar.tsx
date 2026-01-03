@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'; 
 import { useState, useEffect } from 'react';
 import LoginModal from './LoginModal';
+// 引入 Zap 图标
+import { Zap } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname(); 
@@ -31,6 +33,7 @@ export default function Sidebar() {
   const navItems = [
     { name: 'ARTICLES', label: '文章', icon: <Home size={18}/>, path: '/' },
     { name: 'MOMENTS', label: '动态', icon: <Camera size={18}/>, path: '/logs' },
+    { name: 'LOUNGE', label: '聊天室', icon: <Zap size={18}/>, path: '/lounge' }, // 👈 新增
     { name: 'ABOUT', label: '关于', icon: <User size={18}/>, path: '/about' }
   ];
 
