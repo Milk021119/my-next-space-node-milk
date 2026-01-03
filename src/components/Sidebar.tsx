@@ -2,18 +2,22 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import Image from 'next/image'; // ✨ 引入 Image 组件优化性能
+import Image from 'next/image'; 
 import { usePathname } from 'next/navigation'; 
-import { supabase } from '@/lib/supabase';
 import { 
   Home, User, LogIn, LogOut, 
   Github, Ghost, Camera, Zap, Menu, X 
 } from 'lucide-react'; 
 import { useState, useEffect } from 'react';
+
+// ✨ 引入我们封装好的 Hook
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+
+// 引入组件
 import LoginModal from './LoginModal';
 import NotificationCenter from './NotificationCenter';
+import MiniPlayer from '@/components/player/MiniPlayer'; 
 
-// ✨ 静态配置提到组件外，避免重复创建
 const NAV_ITEMS = [
   { name: 'ARTICLES', label: '文章', icon: <Home size={18}/>, path: '/' },
   { name: 'MOMENTS', label: '动态', icon: <Camera size={18}/>, path: '/logs' },
@@ -23,59 +27,14 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ className = "" }: { className?: string }) {
   const pathname = usePathname(); 
-  const [user, setUser] = useState<any>(null);
+  
+  // ✨ 使用 Hook，一行代码搞定用户状态管理
+  const { user, isMounted, logout } = useCurrentUser();
+  
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    async function initUser() {
-      // 1. ⚡️ 优先读取本地缓存 (秒开)
-      const cachedUser = localStorage.getItem('soymilk_user_cache');
-      if (cachedUser) {
-        setUser(JSON.parse(cachedUser));
-      }
-      setIsMounted(true); // 允许渲染头像
-
-      // 2. 📡 异步校验并更新
-      const { data: { session } } = await supabase.auth.getSession();
-      let currentUser = session?.user ?? null;
-
-      if (currentUser) {
-        // 查 profile 表获取最新头像
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .eq('id', currentUser.id)
-          .single();
-        
-        if (profile?.avatar_url) {
-          currentUser.user_metadata.avatar_url = profile.avatar_url;
-        }
-
-        // ✨ 智能更新：只有数据变了才写缓存和重渲染
-        const newUserStr = JSON.stringify(currentUser);
-        if (cachedUser !== newUserStr) {
-          localStorage.setItem('soymilk_user_cache', newUserStr);
-          setUser(currentUser);
-        }
-      } else {
-        if (cachedUser) { // 如果之前有缓存现在没了，说明过期了，清空
-          localStorage.removeItem('soymilk_user_cache');
-          setUser(null);
-        }
-      }
-    }
-
-    initUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      initUser();
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // 路由跳转时自动关闭菜单
+  // 路由跳转时自动关闭移动端菜单
   useEffect(() => { setIsMobileMenuOpen(false); }, [pathname]);
 
   return (
@@ -90,7 +49,7 @@ export default function Sidebar({ className = "" }: { className?: string }) {
         </button>
       </header>
 
-      {/* ✨ 遮罩层：点击空白处关闭菜单 */}
+      {/* ✨ 遮罩层 */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div 
@@ -108,6 +67,7 @@ export default function Sidebar({ className = "" }: { className?: string }) {
         ${isMobileMenuOpen ? 'translate-x-0 pt-24' : '-translate-x-full'}
         ${className}
       `}>
+        {/* Logo */}
         <div className="relative mb-10 hidden lg:block">
           <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-purple-400" />
           <h1 className="text-3xl font-black italic tracking-tighter text-slate-800 mb-1 uppercase">SOYMILK</h1>
@@ -121,14 +81,13 @@ export default function Sidebar({ className = "" }: { className?: string }) {
           ) : (
             <Link href={user ? `/u/${user.id}` : '#'} onClick={() => !user && setIsLoginOpen(true)}>
               <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-white shadow-xl cursor-pointer bg-slate-100 transition-transform hover:scale-105">
-                {/* ✨ 使用 Next.js Image 优化 */}
                 <Image 
                   src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user?.email || 'milk'}`} 
                   alt="avatar" 
                   fill
                   className="object-cover"
                   sizes="96px"
-                  priority // 优先加载头像
+                  priority 
                 />
               </div>
             </Link>
@@ -136,7 +95,7 @@ export default function Sidebar({ className = "" }: { className?: string }) {
         </div>
 
         {/* 导航菜单 */}
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar"> 
           {NAV_ITEMS.map((item) => {
             const isActive = item.path === '/' ? pathname === '/' : pathname.startsWith(item.path);
             return (
@@ -156,9 +115,14 @@ export default function Sidebar({ className = "" }: { className?: string }) {
           })}
         </nav>
 
+        {/* ✨ BGM 播放器 */}
+        <div className="mt-4 mb-2">
+            <MiniPlayer />
+        </div>
+
         {/* 底部功能区 */}
-        <div className="space-y-6 pt-10 border-t border-slate-200/50 mt-auto">
-          {/* 固定高度防止跳动 */}
+        <div className="space-y-4 pt-4 border-t border-slate-200/50">
+          
           <div className="flex items-center justify-between px-2 h-6">
             <div className="flex space-x-4 text-slate-400">
                <Link href="https://github.com" target="_blank"><Github size={18} className="hover:text-black cursor-pointer transition-colors" /></Link>
@@ -168,27 +132,27 @@ export default function Sidebar({ className = "" }: { className?: string }) {
           </div>
           
           <button 
+            // ✨ 直接使用 Hook 提供的 logout 方法，逻辑更清晰
             onClick={async () => {
               if (user) {
-                localStorage.removeItem('soymilk_user_cache'); // 立即清缓存
-                await supabase.auth.signOut();
-                window.location.reload();
+                await logout();
               } else {
                 setIsLoginOpen(true);
               }
             }}
             className={`flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest justify-center lg:justify-start w-full lg:w-auto ${user ? 'text-red-400 hover:text-red-600' : 'text-slate-400 hover:text-purple-600'}`}
           >
-             {!isMounted ? (
-               <span className="opacity-0">...</span> // 占位隐藏
-             ) : (
-               <>
-                 {user ? <LogOut size={14}/> : <LogIn size={14}/>} 
-                 <span>{user ? 'Terminal Exit' : 'System Login'}</span>
-               </>
-             )}
+              {!isMounted ? (
+                <span className="opacity-0">...</span> 
+              ) : (
+                <>
+                  {user ? <LogOut size={14}/> : <LogIn size={14}/>} 
+                  <span>{user ? 'Terminal Exit' : 'System Login'}</span>
+                </>
+              )}
           </button>
         </div>
+
       </aside>
     </>
   );
