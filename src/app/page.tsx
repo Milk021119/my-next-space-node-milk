@@ -116,8 +116,8 @@ export default function Page() {
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
       <Sidebar />
 
-      <main className="w-full lg:ml-80 flex-1 py-24 px-6 lg:px-12 xl:px-16 min-h-screen">
-        <div className="max-w-6xl mx-auto">
+      <main className="w-full lg:ml-72 2xl:ml-80 flex-1 min-h-screen transition-all duration-300">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-20 lg:py-24">
           <AnimatePresence>
             {user && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-16">

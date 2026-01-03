@@ -7,18 +7,37 @@ import Sidebar from '@/components/Sidebar';
 import { format } from 'date-fns';
 import { Heart, MessageSquare, Send } from 'lucide-react'; 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image'; // ✨ 引入
+import Image from 'next/image';
 
-// --- 🖼️ 优化后的九宫格组件 ---
+// ✨ 强力校验函数 (修复 Invalid URL 报错)
+const isValidUrl = (url: string) => {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (trimmed.length === 0) return false;
+  
+  // 1. 允许以 / 开头的本地路径 (例如 /covers/1.jpg)
+  if (trimmed.startsWith('/')) return true;
+  
+  // 2. 允许 http:// 或 https:// 开头的网络路径
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return true;
+  
+  // 其他情况 (比如 "1", "abc", "www.baidu.com") 统统视为非法，过滤掉！
+  return false;
+};
+
+// --- 🖼️ 九宫格组件 ---
 const ImageGrid = ({ images }: { images: string[] }) => {
-  if (!images || images.length === 0) return null;
+  // ✨ 过滤非法图片
+  const validImages = images?.filter(img => isValidUrl(img)) || [];
 
-  // 1张图：大图模式 (sizes: 手机100vw, 电脑600px)
-  if (images.length === 1) {
+  if (validImages.length === 0) return null;
+
+  // 1张图
+  if (validImages.length === 1) {
     return (
       <div className="mt-3 relative w-full max-w-[80%] aspect-video rounded-lg overflow-hidden border border-slate-200 cursor-zoom-in">
         <Image 
-          src={images[0]} 
+          src={validImages[0]} 
           alt="moment" 
           fill 
           className="object-cover"
@@ -28,11 +47,11 @@ const ImageGrid = ({ images }: { images: string[] }) => {
     );
   }
 
-  // 4张图：2x2 模式
-  if (images.length === 4) {
+  // 4张图
+  if (validImages.length === 4) {
     return (
       <div className="mt-3 grid grid-cols-2 gap-1 max-w-[240px]">
-        {images.map((img, i) => (
+        {validImages.map((img, i) => (
           <div key={i} className="relative aspect-square bg-slate-100 overflow-hidden cursor-zoom-in">
             <Image 
               src={img} 
@@ -47,10 +66,10 @@ const ImageGrid = ({ images }: { images: string[] }) => {
     );
   }
 
-  // 其他：3列九宫格模式
+  // 其他：3列九宫格
   return (
     <div className="mt-3 grid grid-cols-3 gap-1 max-w-[360px]">
-      {images.map((img, i) => (
+      {validImages.map((img, i) => (
         <div key={i} className="relative aspect-square bg-slate-100 overflow-hidden cursor-zoom-in">
           <Image 
             src={img} 
@@ -97,7 +116,12 @@ export default function LogsPage() {
 
   async function handlePublish() {
     if (!newContent && !newImages) return;
-    const imagesArray = newImages ? newImages.split(',').map(url => url.trim()).filter(url => url.length > 0) : [];
+    
+    // ✨ 发布前也做一次清洗
+    const imagesArray = newImages 
+      ? newImages.split(',').map(url => url.trim()).filter(url => isValidUrl(url)) 
+      : [];
+    
     await supabase.from('posts').insert([{
       content: newContent, author_email: user.email, user_id: user.id, type: 'moment', images: imagesArray, likes: 0
     }]);
@@ -116,14 +140,13 @@ export default function LogsPage() {
       <Sidebar />
 
       <main className="w-full lg:ml-80 min-h-screen pb-20">
-        {/* Parallax Header - 大图也要优化 */}
         <div className="relative h-72 lg:h-96 bg-slate-800 overflow-hidden group">
           <Image 
             src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=1200" 
             alt="header"
             fill
             className="object-cover opacity-90 group-hover:scale-105 transition-transform duration-[20s]" 
-            priority // 优先加载头图
+            priority
           />
           <div className="absolute bottom-[-30px] right-6 lg:right-10 flex items-end gap-4 z-10">
             <span className="text-white font-bold text-lg mb-10 drop-shadow-md tracking-wider">{user?.email?.split('@')[0] || 'Guest'}</span>
@@ -175,7 +198,6 @@ export default function LogsPage() {
                   </div>
                   <p className="text-slate-700 text-[15px] leading-relaxed whitespace-pre-wrap">{moment.content}</p>
                   
-                  {/* ✨ 优化后的九宫格 */}
                   <ImageGrid images={moment.images} />
                   
                   <div className="mt-3 flex items-center justify-between">
