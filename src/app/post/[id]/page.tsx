@@ -6,14 +6,21 @@ import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
-import { ArrowLeft, MessageSquare, Clock, User, Tag } from 'lucide-react';
+import { zhCN } from 'date-fns/locale'; // ✨ 引入中文日期包
+import { ArrowLeft, MessageSquare, Clock, User, Tag, Send } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import PostSkeleton from '@/components/PostSkeleton';
 import ParallaxImage from '@/components/ParallaxImage';
 import Sidebar from '@/components/Sidebar';
-import Image from 'next/image';
 
-interface Comment { id: number; user_email: string; content: string; created_at: string; }
+// 定义接口，防止 TS 报错
+interface Comment { 
+  id: number; 
+  user_email: string; 
+  content: string; 
+  created_at: string; 
+}
+
 interface Post {
   id: number;
   title: string;
@@ -25,6 +32,7 @@ interface Post {
   user_id?: string;
 }
 
+// 评论组件
 const DetailComments = ({ postId, user, postAuthorId }: { postId: number, user: any, postAuthorId?: string }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -40,9 +48,16 @@ const DetailComments = ({ postId, user, postAuthorId }: { postId: number, user: 
   async function handleSend() {
     if (!newComment.trim() || !user) return;
     setLoading(true);
-    await supabase.from('comments').insert({ post_id: postId, user_id: user.id, user_email: user.email, content: newComment });
     
-    // 触发通知
+    // 插入评论
+    await supabase.from('comments').insert({ 
+      post_id: postId, 
+      user_id: user.id, 
+      user_email: user.email, 
+      content: newComment 
+    });
+    
+    // 触发通知给作者 (如果是别人评论的话)
     if (postAuthorId && user.id !== postAuthorId) {
       await supabase.from('notifications').insert({
         recipient_id: postAuthorId,
@@ -60,23 +75,25 @@ const DetailComments = ({ postId, user, postAuthorId }: { postId: number, user: 
   return (
     <div className="mt-16 pt-10 border-t border-slate-100">
       <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2">
-        <MessageSquare size={16} /> SIGNALS ({comments.length})
+        <MessageSquare size={16} /> 信号反馈 / 评论 ({comments.length})
       </h3>
       
       <div className="space-y-6 mb-10">
         {comments.length === 0 && (
             <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                <p className="text-slate-400 italic text-sm">No signals detected yet. Be the first to transmit.</p>
+                <p className="text-slate-400 italic text-sm">暂无信号接入。成为第一个发送者吧。</p>
             </div>
         )}
         {comments.map(c => (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={c.id} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={c.id} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 hover:border-purple-100 transition-colors">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500" />
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 shadow-sm" />
                   <span className="font-bold text-slate-700 text-sm">{c.user_email?.split('@')[0]}</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">{format(new Date(c.created_at), 'MM/dd HH:mm')}</span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                  {format(new Date(c.created_at), 'MM/dd HH:mm')}
+              </span>
             </div>
             <p className="text-slate-600 leading-relaxed text-sm pl-8">{c.content}</p>
           </motion.div>
@@ -88,24 +105,24 @@ const DetailComments = ({ postId, user, postAuthorId }: { postId: number, user: 
           <textarea 
             value={newComment} 
             onChange={(e) => setNewComment(e.target.value)} 
-            placeholder="Transmit your thought to the network..." 
+            placeholder="向网络发送你的想法..." 
             className="w-full bg-transparent border-none rounded-xl p-4 text-sm outline-none min-h-[100px] resize-none text-slate-700 placeholder:text-slate-300" 
           />
           <div className="flex justify-between items-center px-4 pb-4">
-             <span className="text-[10px] text-slate-300 font-mono">markdown supported</span>
+             <span className="text-[10px] text-slate-300 font-mono">支持 Markdown 语法</span>
              <button 
                 disabled={loading} 
                 onClick={handleSend} 
-                className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-purple-600 transition-all disabled:opacity-50"
+                className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-purple-600 transition-all disabled:opacity-50 flex items-center gap-2"
              >
-                {loading ? 'Sending...' : 'Transmit'}
+                {loading ? '发送中...' : <><Send size={12}/> 发送信号</>}
              </button>
           </div>
         </div>
       ) : (
         <div className="text-center p-8 bg-slate-50 rounded-3xl border border-slate-100">
-            <p className="text-slate-500 text-sm font-bold mb-2">ACCESS DENIED</p>
-            <p className="text-xs text-slate-400">Login required to transmit signals.</p>
+            <p className="text-slate-500 text-sm font-bold mb-2">访问被拒绝 (ACCESS DENIED)</p>
+            <p className="text-xs text-slate-400">需要登录才能发送信号。</p>
         </div>
       )}
     </div>
@@ -119,6 +136,7 @@ export default function PostDetail() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // 默认封面图库
   const ANIME_COVERS = ["/covers/cimgtwjgu000szrs56jyqr0mg.1200.jpg", "/covers/cit9ejr5100c6z35nrc61fd7j.1200.jpg", "/covers/ciuur1ym5000cbsjb09bof78s.1200.jpg", "/covers/claodyl1v0068m78hgrbs3myq.2160p.jpg", "/covers/clba9t5hw007qm78hd3cocnrm.2160p.jpg", "/covers/clbihqun3007ym78h7rsq6cda.2160p.jpg", "/covers/clc7emns2000w6v8hdu5d1k17.2160p.jpg", "/covers/cm7rftv17000hkl8h1gjn9e1v.2160p.jpg", "/covers/cm9lnaup3001ikl8h044j19za.2160p.jpg", "/covers/cm9za5ads001skl8h125v2zrw.2160p.jpg", "/covers/cmabaj7od001xkl8hbdm96tlk.2160p.jpg", "/covers/cmatsfxm100041k8h93jd61z7.2160p.jpg", "/covers/cmbmb7mr3000f1k8hefiqenx7.2160p.jpg", "/covers/cmju6k1jb00168w8hcb4pgdnd.2160p.jpg"];
   const getAnimeCover = (pid: number) => ANIME_COVERS[pid % ANIME_COVERS.length];
 
@@ -134,6 +152,7 @@ export default function PostDetail() {
     setLoading(false);
   }
 
+  // 加载中骨架屏
   if (loading) return (
       <div className="min-h-screen bg-[#f0f2f5] font-sans flex">
           <Sidebar />
@@ -143,9 +162,10 @@ export default function PostDetail() {
       </div>
   );
 
+  // 404 状态
   if (!post) return (
       <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center text-slate-400 font-mono">
-          SIGNAL_LOST_404
+          信号丢失 (SIGNAL_LOST_404)
       </div>
   );
 
@@ -157,12 +177,12 @@ export default function PostDetail() {
       <nav className="fixed top-0 right-0 left-0 lg:left-72 2xl:left-80 z-30 px-6 py-4 flex justify-between items-center bg-white/70 backdrop-blur-xl border-b border-white/20 transition-all duration-300">
         <button 
             onClick={() => router.back()} 
-            className="p-2 bg-white/50 hover:bg-white rounded-full transition-all flex items-center gap-2 text-slate-600 font-bold text-xs uppercase tracking-wider shadow-sm border border-white/50"
+            className="p-2 bg-white/50 hover:bg-white rounded-full transition-all flex items-center gap-2 text-slate-600 font-bold text-xs uppercase tracking-wider shadow-sm border border-white/50 group"
         >
-            <ArrowLeft size={16} /> <span>Back</span>
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> <span>返回</span>
         </button>
         <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase border border-slate-200 px-2 py-1 rounded">
-            LOG #{post.id}
+            日志编号 #{post.id}
         </div>
       </nav>
 
@@ -200,7 +220,7 @@ export default function PostDetail() {
               
               <div className="flex items-center justify-center gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
                   <span className="flex items-center gap-2">
-                      <Clock size={14} /> {format(new Date(post.created_at), 'MMM dd, yyyy')}
+                      <Clock size={14} /> {format(new Date(post.created_at), 'yyyy年MM月dd日', { locale: zhCN })}
                   </span>
                   <span className="flex items-center gap-2">
                       <User size={14} /> {post.author_email?.split('@')[0]}
@@ -208,7 +228,7 @@ export default function PostDetail() {
               </div>
             </div>
 
-            {/* Markdown 正文 */}
+            {/* Markdown 正文 (已深度优化样式) */}
             <article className="
                 prose prose-slate prose-lg max-w-none 
                 prose-headings:font-black prose-headings:tracking-tight 
