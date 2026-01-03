@@ -1,159 +1,176 @@
-"use client";
+'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; 
-import { usePathname } from 'next/navigation'; 
+import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { 
-  Home, User, LogIn, LogOut, 
-  Github, Ghost, Camera, Zap, Menu, X 
-} from 'lucide-react'; 
-import { useState, useEffect } from 'react';
-
-// ✨ 引入我们封装好的 Hook
+  Home, 
+  BookOpen, 
+  Coffee, 
+  Settings, 
+  UserCircle, // 个人中心图标
+  LogOut, 
+  Menu, 
+  X,
+  User,
+  Radio
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-
-// 引入组件
-import LoginModal from './LoginModal';
-import NotificationCenter from './NotificationCenter';
 import MiniPlayer from '@/components/player/MiniPlayer'; 
 
-const NAV_ITEMS = [
-  { name: 'ARTICLES', label: '文章', icon: <Home size={18}/>, path: '/' },
-  { name: 'MOMENTS', label: '动态', icon: <Camera size={18}/>, path: '/logs' },
-  { name: 'LOUNGE', label: '聊天室', icon: <Zap size={18}/>, path: '/lounge' },
-  { name: 'ABOUT', label: '关于', icon: <User size={18}/>, path: '/about' }
-];
+export default function Sidebar() {
+  const pathname = usePathname();
+  const { user } = useCurrentUser();
+  const [isOpen, setIsOpen] = useState(false);
 
-export default function Sidebar({ className = "" }: { className?: string }) {
-  const pathname = usePathname(); 
-  
-  // ✨ 使用 Hook，一行代码搞定用户状态管理
-  const { user, isMounted, logout } = useCurrentUser();
-  
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
 
-  // 路由跳转时自动关闭移动端菜单
-  useEffect(() => { setIsMobileMenuOpen(false); }, [pathname]);
+  // ✅ 1. 基础菜单 (前三个)
+  const navItems = [
+    { name: '首页', path: '/', icon: Home },
+    { name: '文章', path: '/posts', icon: BookOpen },
+    { name: '动态', path: '/logs', icon: Coffee },
+    { name: '信号塔', path: '/chat', icon: Radio },
+  ];
+
+  // ✅ 2. 第四个：个人中心 (每个人都有)
+  // 逻辑：如果登录了去 /u/id，没登录去 /auth/login
+  navItems.push({
+    name: '个人中心',
+    path: user ? `/u/${user.id}` : '/auth/login', 
+    icon: UserCircle
+  });
+
+  // ✅ 3. 第五个：后台管理 (仅限管理员)
+  // 权限判断：你的邮箱 OR 数据库 is_admin 字段
+  const isAdmin = user?.email === 's2285627839@outlook.com' || user?.user_metadata?.is_admin === true;
+  
+  if (isAdmin) {
+    navItems.push({
+      name: '后台管理',
+      path: '/admin',
+      icon: Settings
+    });
+  }
 
   return (
     <>
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-
-      {/* 📱 Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center bg-white/70 backdrop-blur-xl border-b border-white/20">
-        <h1 className="text-lg font-black italic tracking-tighter text-slate-800 uppercase">SOYMILK</h1>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600 active:scale-95 transition-transform">
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      {/* 移动端汉堡菜单按钮 */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          className="p-3 bg-white/80 backdrop-blur-md rounded-xl shadow-lg border border-white/50 text-slate-800"
+        >
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
-      </header>
+      </div>
 
-      {/* ✨ 遮罩层 */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/20 z-30 lg:hidden backdrop-blur-sm"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-      
-      {/* 🖥️ Sidebar Body */}
-      <aside className={`
-        fixed inset-0 z-40 bg-white/80 backdrop-blur-3xl border-r border-white/50 flex flex-col p-10 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
-        lg:translate-x-0 lg:left-0 lg:top-0 lg:w-72 2xl:w-80 lg:h-full lg:bg-white/40 lg:backdrop-blur-xl
-        ${isMobileMenuOpen ? 'translate-x-0 pt-24' : '-translate-x-full'}
-        ${className}
-      `}>
-        {/* Logo */}
-        <div className="relative mb-10 hidden lg:block">
-          <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-purple-400" />
-          <h1 className="text-3xl font-black italic tracking-tighter text-slate-800 mb-1 uppercase">SOYMILK</h1>
-          <p className="text-[10px] font-bold text-purple-400 uppercase tracking-[0.3em]">Digital Frontier</p>
-        </div>
-
-        {/* 头像区域 */}
-        <div className="relative group w-24 h-24 mb-10 mx-auto lg:mx-0">
-          {!isMounted ? (
-            <div className="w-24 h-24 rounded-2xl bg-slate-200 animate-pulse border-4 border-white/50" />
-          ) : (
-            <Link href={user ? `/u/${user.id}` : '#'} onClick={() => !user && setIsLoginOpen(true)}>
-              <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-white shadow-xl cursor-pointer bg-slate-100 transition-transform hover:scale-105">
-                <Image 
-                  src={user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user?.email || 'milk'}`} 
-                  alt="avatar" 
-                  fill
-                  className="object-cover"
-                  sizes="96px"
-                  priority 
-                />
-              </div>
-            </Link>
-          )}
-        </div>
-
-        {/* 导航菜单 */}
-        <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar"> 
-          {NAV_ITEMS.map((item) => {
-            const isActive = item.path === '/' ? pathname === '/' : pathname.startsWith(item.path);
-            return (
-              <Link key={item.name} href={item.path} className="block w-full">
-                <motion.div 
-                  whileHover={{ x: 8 }} 
-                  className={`flex items-center space-x-4 p-4 rounded-xl text-sm font-bold transition-all cursor-pointer 
-                    ${isActive 
-                      ? 'bg-white/80 text-purple-600 shadow-sm border border-white/50' 
-                      : 'text-slate-400 hover:text-slate-900 hover:bg-white/40'}`}
-                >
-                  {item.icon} 
-                  <span>{item.name} <span className={`font-normal ${isActive ? 'opacity-60' : 'opacity-30'}`}>/ {item.label}</span></span>
-                </motion.div>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* ✨ BGM 播放器 */}
-        <div className="mt-4 mb-2">
-            <MiniPlayer />
-        </div>
-
-        {/* 底部功能区 */}
-        <div className="space-y-4 pt-4 border-t border-slate-200/50">
+      {/* 侧边栏容器 */}
+      <motion.aside 
+        initial={false}
+        animate={{ x: isOpen ? 0 : '-100%' }}
+        className={`fixed inset-y-0 left-0 z-40 w-72 bg-white/80 backdrop-blur-2xl border-r border-slate-100 shadow-2xl 
+          lg:shadow-none lg:translate-x-0 lg:fixed transition-transform duration-300 ease-in-out`}
+        style={{ x: undefined }}
+      >
+        <div className="h-full flex flex-col px-6 py-6">
           
-          <div className="flex items-center justify-between px-2 h-6">
-            <div className="flex space-x-4 text-slate-400">
-               <Link href="https://github.com" target="_blank"><Github size={18} className="hover:text-black cursor-pointer transition-colors" /></Link>
-               <Ghost size={18} className="hover:text-purple-400 cursor-pointer transition-colors" />
+          {/* Logo 区域 */}
+          <div className="flex-shrink-0 mb-8 flex items-center gap-3 px-2">
+            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-md shadow-purple-900/20">
+              <span className="font-black text-lg">S</span>
             </div>
-            {isMounted && user && <NotificationCenter userId={user.id} />}
+            <div>
+              <h1 className="font-black text-xl tracking-tighter text-slate-900">SOYMILK</h1>
+              <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em] uppercase">个人数字空间</p>
+            </div>
           </div>
-          
-          <button 
-            // ✨ 直接使用 Hook 提供的 logout 方法，逻辑更清晰
-            onClick={async () => {
-              if (user) {
-                await logout();
-              } else {
-                setIsLoginOpen(true);
-              }
-            }}
-            className={`flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest justify-center lg:justify-start w-full lg:w-auto ${user ? 'text-red-400 hover:text-red-600' : 'text-slate-400 hover:text-purple-600'}`}
-          >
-              {!isMounted ? (
-                <span className="opacity-0">...</span> 
-              ) : (
-                <>
-                  {user ? <LogOut size={14}/> : <LogIn size={14}/>} 
-                  <span>{user ? 'Terminal Exit' : 'System Login'}</span>
-                </>
-              )}
-          </button>
-        </div>
 
-      </aside>
+          {/* 导航菜单 */}
+          <nav className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+            {navItems.map((item) => {
+              const isActive = pathname === item.path || (item.path !== '/' && pathname?.startsWith(item.path));
+              const Icon = item.icon;
+
+              return (
+                <Link key={item.name} href={item.path} onClick={() => setIsOpen(false)} className="block w-full">
+                  <div 
+                    className={`relative flex items-center space-x-4 p-4 rounded-xl text-xs font-black tracking-widest transition-all duration-300 group overflow-hidden
+                      ${isActive 
+                        ? 'bg-slate-900 text-white shadow-lg shadow-purple-900/20' 
+                        : 'text-slate-400 hover:bg-white hover:text-slate-900 hover:shadow-sm'
+                      }`}
+                  >
+                    {isActive && (
+                      <motion.div 
+                        layoutId="active-nav"
+                        className="absolute inset-0 bg-slate-900 z-0"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                    
+                    <div className="relative z-10 flex items-center gap-4">
+                      <Icon size={18} className={isActive ? "text-purple-400" : "group-hover:text-purple-600 transition-colors"} />
+                      <span>{item.name}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* 底部区域 */}
+          <div className="flex-shrink-0 mt-6 pt-6 border-t border-slate-100 space-y-6 bg-white/0">
+            
+            <MiniPlayer />
+
+            {user ? (
+              <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                 <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 flex-shrink-0">
+                    <img 
+                      src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.email}`} 
+                      alt="avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-slate-900 truncate">
+                      {user.user_metadata?.username || user.email?.split('@')[0]}
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+                      在线
+                    </div>
+                 </div>
+                 <button 
+                   onClick={handleLogout}
+                   className="p-2 text-slate-300 hover:text-red-500 transition-colors hover:bg-red-50 rounded-lg"
+                   title="退出登录"
+                 >
+                   <LogOut size={16} />
+                 </button>
+              </div>
+            ) : (
+              <Link href="/auth/login" className="flex items-center justify-center gap-2 p-3 w-full bg-slate-900 text-white rounded-xl text-xs font-bold uppercase hover:bg-purple-600 transition-colors shadow-lg shadow-slate-900/10">
+                <User size={16} />
+                <span>登录 / 注册</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      </motion.aside>
+
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
     </>
   );
 }
