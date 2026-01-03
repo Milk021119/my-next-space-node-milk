@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import LoadingScreen from "@/components/LoadingScreen"; // ✨ 引入全局加载动画
+import LoadingScreen from "@/components/LoadingScreen";
+import CommandPalette from "@/components/CommandPalette"; // ✨ 引入搜索组件
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   title: "SOYMILK | Digital Frontier",
   description: "Personal digital space for thoughts, code, and moments.",
   icons: {
-    icon: "/favicon.ico", // 确保你 public 文件夹里有 favicon
+    icon: "/favicon.ico",
   },
 };
 
@@ -21,10 +22,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-[#f0f2f5]`}>
-        {/* ✨ 全局加载层：放在最上面，确保覆盖所有内容 */}
+        {/* 1. 开机动画 */}
         <LoadingScreen />
         
-        {/* 页面主体内容 */}
+        {/* 2. 全局搜索 (自带悬浮按钮) */}
+        <CommandPalette />
+        
+        {/* 3. 页面主体 */}
         {children}
       </body>
     </html>
