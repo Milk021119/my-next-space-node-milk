@@ -68,10 +68,7 @@ export default function HomePage() {
               </div>
 
               <h1 className="text-5xl lg:text-7xl font-black text-slate-800 tracking-tighter leading-[1.1]">
-                你好，我是 <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-cyan-500">
-                  <GlitchText text="赛博游牧民" />
-                </span>
+                你好，我是Milk <br/>
               </h1>
 
               <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
@@ -118,10 +115,10 @@ export default function HomePage() {
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Cpu size={100} />
                 </div>
-                <h2 className="text-2xl font-black text-slate-800 mb-3">关于我</h2>
+                <h2 className="text-2xl font-black text-slate-800 mb-3">关于我(sks)</h2>
                 <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                  全栈开发者 / 独立创造者 / 像素艺术家。
-                  热衷于创造令人愉悦的交互体验。我相信代码不仅是逻辑的堆砌，更是数字世界的诗歌。
+                  全栈开发者 / 独立创造者 / 像素艺术家。(bushi
+                  应该热衷于创造令人愉悦的交互体验。我相信代码不仅是逻辑的堆砌，更是数字世界的诗歌。(偷来的)
                 </p>
                 <div className="flex gap-3">
                   <a href="#" className="p-2.5 bg-slate-100 rounded-full text-slate-600 hover:bg-black hover:text-white transition-colors"><Github size={18}/></a>
