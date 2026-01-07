@@ -1,183 +1,298 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, Send, Trash2, Reply, Loader2, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Send, Trash2, Loader2, User } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-type Comment = {
-  id: number;
-  content: string;
-  created_at: string;
-  user_id: string;
-  profiles: {
-    username: string;
-    avatar_url: string;
-  } | null;
-};
+import Image from 'next/image';
+import Link from 'next/link';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { getComments, addComment, deleteComment, type Comment } from '@/lib/comments';
+import LoginModal from '@/components/LoginModal';
 
 interface CommentSectionProps {
   postId: number;
-  postAuthorId: string; // 用于发送通知
-  currentUser: any;     // 当前登录用户
 }
 
-export default function CommentSection({ postId, postAuthorId, currentUser }: CommentSectionProps) {
+export default function CommentSection({ postId }: CommentSectionProps) {
+  const { user, isMounted } = useCurrentUser();
   const [comments, setComments] = useState<Comment[]>([]);
-  const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [content, setContent] = useState('');
+  const [replyTo, setReplyTo] = useState<{ id: number; username: string } | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // 初始化加载评论
   useEffect(() => {
     fetchComments();
-    
-    // 订阅实时评论 (可选)
-    const channel = supabase.channel(`comments-${postId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: `post_id=eq.${postId}` }, 
-      (payload) => {
-         // 简单策略：收到新评论就重新拉取，确保关联数据正确
-         fetchComments();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [postId]);
 
-  const fetchComments = async () => {
-    const { data } = await supabase
-      .from('comments')
-      .select(`*, profiles:user_id ( username, avatar_url )`)
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true });
-    
-    if (data) setComments(data as any);
-    setLoading(false);
-  };
-
-  const handleSubmit = async () => {
-    if (!content.trim() || !currentUser) return;
-    setSubmitting(true);
-
+  async function fetchComments() {
+    setLoading(true);
     try {
-      // 1. 写入评论
-      const { data: newComment, error } = await supabase
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: currentUser.id,
-          content: content.trim()
-        })
-        .select()
-        .single();
+      const data = await getComments(postId);
+      setComments(data);
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      if (error) throw error;
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
 
-      // 2. 发送通知 (如果不是自己给自己评论)
-      if (postAuthorId !== currentUser.id) {
-        await supabase.from('notifications').insert({
-          recipient_id: postAuthorId,
-          sender_email: currentUser.email, // 暂用 email 标识发送者，也可改用 id
-          content: `评论了你的动态: "${content.slice(0, 20)}..."`,
-          is_read: false,
-          post_id: postId
-        });
+    if (!content.trim() || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const newComment = await addComment(postId, user.id, content, replyTo?.id);
+      if (newComment) {
+        // 刷新评论列表
+        await fetchComments();
+        setContent('');
+        setReplyTo(null);
       }
-
-      setContent('');
-      // 实时订阅会处理更新，这里也可以手动 push 优化体验
-      
-    } catch (err) {
-      console.error('评论失败', err);
-      alert('评论发送失败');
+    } catch (error) {
+      console.error('Failed to add comment:', error);
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
-  const handleDelete = async (commentId: number) => {
-    if (!confirm('确定删除这条评论吗？')) return;
-    
-    // 乐观更新 UI
-    setComments(prev => prev.filter(c => c.id !== commentId));
-    await supabase.from('comments').delete().eq('id', commentId);
-  };
+  async function handleDelete(commentId: number) {
+    if (!user || !confirm('确定要删除这条评论吗？')) return;
+
+    try {
+      await deleteComment(commentId, user.id);
+      await fetchComments();
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+    }
+  }
+
+  // 计算总评论数（包括回复）
+  const totalCount = comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0);
+
+  if (!isMounted) {
+    return (
+      <div className="mt-16 pt-8 border-t border-[var(--border-color)]">
+        <div className="flex items-center gap-3 mb-8">
+          <MessageCircle size={24} className="text-purple-500" />
+          <h2 className="text-xl font-black text-[var(--text-primary)]">评论</h2>
+        </div>
+        <div className="flex justify-center py-8">
+          <Loader2 className="animate-spin text-purple-500" size={24} />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-100/50">
-      {/* 评论列表区 */}
-      <div className="space-y-4 mb-6">
-        {loading ? (
-          <div className="flex justify-center py-2"><Loader2 size={16} className="animate-spin text-slate-400"/></div>
-        ) : comments.length === 0 ? (
-          <p className="text-xs text-slate-400 italic text-center py-2">还没有人说话，打破沉默吧...</p>
-        ) : (
-          comments.map((comment) => (
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              key={comment.id} 
-              className="group flex gap-3 text-sm"
-            >
-              <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden flex-shrink-0">
-                <img src={comment.profiles?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 bg-slate-50/50 rounded-2xl rounded-tl-none p-3 hover:bg-slate-50 transition-colors">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="font-bold text-slate-700 text-xs">{comment.profiles?.username || '神秘访客'}</span>
-                  <span className="text-[10px] text-slate-400">{formatDistanceToNow(new Date(comment.created_at), { locale: zhCN, addSuffix: true })}</span>
-                </div>
-                <p className="text-slate-600 leading-relaxed">{comment.content}</p>
-              </div>
-              
-              {/* 删除按钮 (仅本人或管理员可见，这里简单判断本人) */}
-              {currentUser?.id === comment.user_id && (
-                <button 
-                  onClick={() => handleDelete(comment.id)}
-                  className="self-center p-1.5 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </motion.div>
-          ))
-        )}
+    <div className="mt-16 pt-8 border-t border-[var(--border-color)]">
+      {/* 标题 */}
+      <div className="flex items-center gap-3 mb-8">
+        <MessageCircle size={24} className="text-purple-500" />
+        <h2 className="text-xl font-black text-[var(--text-primary)]">
+          评论 {totalCount > 0 && <span className="text-purple-500">({totalCount})</span>}
+        </h2>
       </div>
 
-      {/* 输入框区 */}
-      <div className="flex gap-3 items-end">
-        <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
-           {currentUser ? (
-             <img src={currentUser.user_metadata?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover" />
-           ) : (
-             <div className="w-full h-full flex items-center justify-center text-slate-400"><User size={14}/></div>
-           )}
+      {/* 评论表单 */}
+      <form onSubmit={handleSubmit} className="mb-8">
+        {replyTo && (
+          <div className="flex items-center gap-2 mb-2 text-sm text-[var(--text-muted)]">
+            <Reply size={14} />
+            <span>回复 @{replyTo.username}</span>
+            <button
+              type="button"
+              onClick={() => setReplyTo(null)}
+              className="text-red-400 hover:text-red-500"
+            >
+              取消
+            </button>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] overflow-hidden flex-shrink-0">
+            {user?.user_metadata?.avatar_url ? (
+              <Image
+                src={user.user_metadata.avatar_url}
+                alt="avatar"
+                width={40}
+                height={40}
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <User size={20} className="text-[var(--text-muted)]" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 relative">
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={user ? "写下你的评论..." : "登录后发表评论"}
+              className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl px-4 py-3 pr-12 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-purple-400 resize-none min-h-[80px] transition-colors"
+              disabled={!user}
+            />
+            <button
+              type="submit"
+              disabled={!content.trim() || submitting}
+              className="absolute right-3 bottom-3 p-2 rounded-xl bg-purple-500 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-600 transition-colors"
+            >
+              {submitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+            </button>
+          </div>
         </div>
-        <div className="flex-1 relative">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={!currentUser || submitting}
-            placeholder={currentUser ? "写下你的评论..." : "请先登录..."}
-            className="w-full bg-slate-100/50 hover:bg-white focus:bg-white border border-transparent focus:border-purple-200 rounded-2xl py-2 px-4 pr-10 text-sm outline-none transition-all resize-none h-[40px] focus:h-[80px]"
-          />
-          <button 
-            onClick={handleSubmit}
-            disabled={!content.trim() || submitting}
-            className="absolute bottom-2 right-2 p-1.5 bg-slate-900 text-white rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-600 transition-colors"
-          >
-            {submitting ? <Loader2 size={14} className="animate-spin"/> : <Send size={14} />}
-          </button>
+        {!user && (
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            <button
+              type="button"
+              onClick={() => setShowLoginModal(true)}
+              className="text-purple-500 hover:underline"
+            >
+              登录
+            </button>
+            {' '}后即可发表评论
+          </p>
+        )}
+      </form>
+
+      {/* 评论列表 */}
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="animate-spin text-purple-500" size={24} />
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="text-center py-12">
+          <MessageCircle size={48} className="mx-auto mb-4 text-[var(--text-muted)] opacity-30" />
+          <p className="text-[var(--text-muted)]">暂无评论，来发表第一条吧！</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <AnimatePresence>
+            {comments.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                currentUserId={user?.id}
+                onReply={(id, username) => setReplyTo({ id, username })}
+                onDelete={handleDelete}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+    </div>
+  );
+}
+
+// 单条评论组件
+interface CommentItemProps {
+  comment: Comment;
+  currentUserId?: string;
+  onReply: (id: number, username: string) => void;
+  onDelete: (id: number) => void;
+  isReply?: boolean;
+}
+
+function CommentItem({ comment, currentUserId, onReply, onDelete, isReply = false }: CommentItemProps) {
+  const username = comment.profiles?.username || '匿名用户';
+  const avatarUrl = comment.profiles?.avatar_url;
+  const isOwner = currentUserId === comment.user_id;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className={`${isReply ? 'ml-12 mt-4' : ''}`}
+    >
+      <div className="flex gap-3">
+        <Link href={`/u/${comment.user_id}`} className="flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={username}
+                width={40}
+                height={40}
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <User size={20} className="text-[var(--text-muted)]" />
+              </div>
+            )}
+          </div>
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Link
+              href={`/u/${comment.user_id}`}
+              className="font-bold text-sm text-[var(--text-primary)] hover:text-purple-500 transition-colors"
+            >
+              {username}
+            </Link>
+            <span className="text-xs text-[var(--text-muted)]">
+              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: zhCN })}
+            </span>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap break-words">
+            {comment.content}
+          </p>
+          <div className="flex items-center gap-4 mt-2">
+            {!isReply && (
+              <button
+                onClick={() => onReply(comment.id, username)}
+                className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-purple-500 transition-colors"
+              >
+                <Reply size={14} />
+                回复
+              </button>
+            )}
+            {isOwner && (
+              <button
+                onClick={() => onDelete(comment.id)}
+                className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-red-500 transition-colors"
+              >
+                <Trash2 size={14} />
+                删除
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* 回复列表 */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {comment.replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              currentUserId={currentUserId}
+              onReply={onReply}
+              onDelete={onDelete}
+              isReply
+            />
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 }
