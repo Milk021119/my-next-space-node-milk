@@ -54,7 +54,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] font-sans flex">
+    <div className="min-h-screen bg-[var(--bg-primary)] font-sans flex">
       <Sidebar />
       
       {/* 消息提示弹窗 (Toast) */}
@@ -81,78 +81,78 @@ export default function AccountPage() {
         <div className="max-w-3xl mx-auto pt-10">
           
           <div className="mb-10">
-              <h1 className="text-3xl font-black text-slate-800 mb-2">账号安全中心</h1>
-              <p className="text-slate-400 text-sm">管理您的登录方式与安全凭证。</p>
+              <h1 className="text-3xl font-black text-[var(--text-primary)] mb-2">账号安全中心</h1>
+              <p className="text-[var(--text-muted)] text-sm">管理您的登录方式与安全凭证。</p>
           </div>
 
-          <div className="bg-white rounded-[2rem] p-8 lg:p-10 shadow-sm border border-slate-100 space-y-10">
+          <div className="bg-[var(--bg-secondary)] rounded-[2rem] p-8 lg:p-10 shadow-sm border border-[var(--border-color)] space-y-10">
             
             {/* 1. 账号绑定 */}
             <div>
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">账号绑定</h3>
+              <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-6">账号绑定</h3>
               <div className="space-y-4">
                 
                 {/* 邮箱 (已绑定) */}
-                <div className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100/50">
+                <div className="flex items-center justify-between p-5 bg-[var(--bg-tertiary)] rounded-2xl border border-[var(--border-color)]">
                   <div className="flex items-center gap-4">
-                      <div className="p-3 bg-purple-100 text-purple-600 rounded-xl">
+                      <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
                           <Mail size={20}/>
                       </div>
                       <div>
-                          <p className="font-bold text-slate-700 text-sm">邮箱绑定</p>
-                          <p className="text-xs text-slate-400 mt-0.5">{user?.email}</p>
+                          <p className="font-bold text-[var(--text-primary)] text-sm">邮箱绑定</p>
+                          <p className="text-xs text-[var(--text-muted)] mt-0.5">{user?.email}</p>
                       </div>
                   </div>
-                  <span className="text-[10px] font-black text-green-500 bg-green-50 px-3 py-1.5 rounded-full border border-green-100 uppercase tracking-wide">
+                  <span className="text-[10px] font-black text-green-500 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-800 uppercase tracking-wide">
                       已绑定
                   </span>
                 </div>
 
                 {/* 手机号 (暂不可用) */}
-                <div className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100/50 opacity-60 grayscale">
+                <div className="flex items-center justify-between p-5 bg-[var(--bg-tertiary)] rounded-2xl border border-[var(--border-color)] opacity-60 grayscale">
                   <div className="flex items-center gap-4">
-                      <div className="p-3 bg-slate-200 text-slate-500 rounded-xl">
+                      <div className="p-3 bg-[var(--bg-tertiary)] text-[var(--text-muted)] rounded-xl">
                           <Smartphone size={20}/>
                       </div>
                       <div>
-                          <p className="font-bold text-slate-700 text-sm">手机号</p>
-                          <p className="text-xs text-slate-400 mt-0.5">暂不支持绑定</p>
+                          <p className="font-bold text-[var(--text-primary)] text-sm">手机号</p>
+                          <p className="text-xs text-[var(--text-muted)] mt-0.5">暂不支持绑定</p>
                       </div>
                   </div>
-                  <button disabled className="text-xs font-bold text-slate-400 px-3 py-1.5 border border-slate-200 rounded-full">去绑定</button>
+                  <button disabled className="text-xs font-bold text-[var(--text-muted)] px-3 py-1.5 border border-[var(--border-color)] rounded-full">去绑定</button>
                 </div>
 
               </div>
             </div>
 
-            <hr className="border-slate-100"/>
+            <hr className="border-[var(--border-color)]"/>
 
             {/* 2. 修改密码 */}
             <div>
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
                   <ShieldCheck size={16}/> 安全设置
               </h3>
               
-              <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100">
+              <div className="bg-[var(--bg-tertiary)] rounded-2xl p-6 border border-[var(--border-color)]">
                   <div className="grid gap-4 mb-6">
                       <div className="relative">
-                          <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/>
+                          <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"/>
                           <input 
                             type="password" 
                             placeholder="输入新密码 (至少6位)" 
                             value={newPassword} 
                             onChange={e => setNewPassword(e.target.value)} 
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-3 pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
                           />
                       </div>
                       <div className="relative">
-                          <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/>
+                          <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"/>
                           <input 
                             type="password" 
                             placeholder="再次确认新密码" 
                             value={confirmPassword} 
                             onChange={e => setConfirmPassword(e.target.value)} 
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-sm outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-3 pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
                           />
                       </div>
                   </div>
@@ -161,7 +161,7 @@ export default function AccountPage() {
                       <button 
                         onClick={handleUpdatePassword} 
                         disabled={loading || !newPassword} 
-                        className="bg-slate-900 text-white px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-600 hover:shadow-lg hover:shadow-purple-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-600 dark:hover:bg-purple-400 hover:shadow-lg hover:shadow-purple-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                           {loading ? '处理中...' : '确认修改'}
                       </button>

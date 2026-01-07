@@ -132,7 +132,7 @@ export default function ProfilePage() {
 
   if (loading) {
       return (
-          <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+          <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
               <Loader2 className="animate-spin text-purple-600" size={32} />
           </div>
       );
@@ -140,10 +140,10 @@ export default function ProfilePage() {
 
   if (!profile) {
       return (
-          <div className="min-h-screen bg-[#f0f2f5] flex flex-col items-center justify-center text-slate-400 gap-4">
-              <h1 className="text-2xl font-bold text-slate-800">用户不存在</h1>
+          <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center text-[var(--text-muted)] gap-4">
+              <h1 className="text-2xl font-bold text-[var(--text-primary)]">用户不存在</h1>
               <p>该用户可能已被注销或 ID 错误。</p>
-              <button onClick={() => router.push('/')} className="px-6 py-2 bg-white rounded-full text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2">
+              <button onClick={() => router.push('/')} className="px-6 py-2 bg-[var(--bg-secondary)] rounded-full text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-[var(--text-primary)]">
                  <ArrowLeft size={16}/> 返回首页
               </button>
           </div>
@@ -151,12 +151,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] font-sans flex">
+    <div className="min-h-screen bg-[var(--bg-primary)] font-sans flex">
       <Sidebar />
       
       <main className="flex-1 lg:ml-72 2xl:ml-80 transition-all duration-300 min-h-screen pb-20">
         
-        <div className="h-64 w-full bg-slate-300 relative overflow-hidden group">
+        <div className="h-64 w-full bg-[var(--bg-tertiary)] relative overflow-hidden group">
           <Image 
              src={formData.bg_url || profile.bg_url || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=1200"} 
              alt="background" 
@@ -204,16 +204,16 @@ export default function ProfilePage() {
                   <input 
                     value={formData.username || ''} 
                     onChange={e => setFormData({...formData, username: e.target.value})} 
-                    className="text-3xl font-black bg-transparent border-b-2 border-slate-300 outline-none w-full md:w-auto focus:border-purple-500 transition-colors pb-1 placeholder:text-slate-300" 
+                    className="text-3xl font-black bg-transparent border-b-2 border-[var(--border-color)] outline-none w-full md:w-auto focus:border-purple-500 transition-colors pb-1 placeholder:text-[var(--text-muted)] text-[var(--text-primary)]" 
                     placeholder="设置昵称" 
                     autoFocus
                   />
               ) : (
-                  <h1 className="text-3xl font-black text-slate-800 drop-shadow-sm mb-1">
+                  <h1 className="text-3xl font-black text-[var(--text-primary)] drop-shadow-sm mb-1">
                       {profile.username || '未命名访客'}
                   </h1>
               )}
-              <p className="text-slate-500 text-xs font-mono bg-white/50 inline-block px-2 py-1 rounded backdrop-blur-sm border border-white/50 mt-2">
+              <p className="text-[var(--text-muted)] text-xs font-mono bg-[var(--bg-card)] inline-block px-2 py-1 rounded backdrop-blur-sm border border-[var(--border-color)] mt-2">
                   UID: {profile.id.split('-')[0]}
               </p>
             </div>
@@ -224,8 +224,8 @@ export default function ProfilePage() {
                         onClick={() => isEditing ? handleSave() : setIsEditing(true)} 
                         className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 
                             ${isEditing 
-                                ? 'bg-slate-900 text-white hover:bg-black shadow-slate-200 ring-2 ring-offset-2 ring-slate-900' 
-                                : 'bg-white text-slate-700 hover:text-purple-600 shadow-slate-200 hover:shadow-xl'
+                                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-black shadow-slate-200 ring-2 ring-offset-2 ring-slate-900 dark:ring-slate-100' 
+                                : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:text-purple-600 shadow-slate-200 hover:shadow-xl'
                             }`}
                     >
                         {isEditing ? <><Save size={16}/> 保存资料</> : <><Edit3 size={16}/> 编辑资料</>}
@@ -237,17 +237,17 @@ export default function ProfilePage() {
           <motion.div 
              initial={{ opacity: 0, y: 20 }} 
              animate={{ opacity: 1, y: 0 }} 
-             className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8"
+             className="bg-[var(--bg-secondary)] rounded-[2rem] p-8 shadow-sm border border-[var(--border-color)] grid grid-cols-1 md:grid-cols-2 gap-8"
           >
             <div className="col-span-full">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
                     <Edit3 size={12}/> 个性签名
                 </h3>
                 {isEditing ? (
                     <textarea 
                         value={formData.bio || ''} 
                         onChange={e => setFormData({...formData, bio: e.target.value})} 
-                        className="w-full bg-slate-50 rounded-xl p-4 text-sm text-slate-700 outline-none resize-none h-28 focus:ring-2 focus:ring-purple-100 transition-all border border-transparent focus:border-purple-200" 
+                        className="w-full bg-[var(--bg-tertiary)] rounded-xl p-4 text-sm text-[var(--text-secondary)] outline-none resize-none h-28 focus:ring-2 focus:ring-purple-100 transition-all border border-transparent focus:border-purple-200" 
                         placeholder="写一句很酷的签名吧..." 
                     />
                 ) : (
@@ -260,42 +260,42 @@ export default function ProfilePage() {
                 )}
             </div>
 
-            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 hover:border-purple-100 transition-colors group">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-purple-500 transition-colors">
+            <div className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] hover:border-purple-400/50 transition-colors group">
+                <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-purple-500 transition-colors">
                     <Calendar size={14}/> 出生日期
                 </h3>
                 {isEditing ? (
-                    <input type="date" value={formData.birthday || ''} onChange={e => setFormData({...formData, birthday: e.target.value})} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none w-full focus:border-purple-400" />
+                    <input type="date" value={formData.birthday || ''} onChange={e => setFormData({...formData, birthday: e.target.value})} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm outline-none w-full focus:border-purple-400 text-[var(--text-primary)]" />
                 ) : (
-                    <p className="text-slate-800 font-bold text-lg font-mono">{profile.birthday || '未设置'}</p>
+                    <p className="text-[var(--text-primary)] font-bold text-lg font-mono">{profile.birthday || '未设置'}</p>
                 )}
             </div>
 
-            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 hover:border-purple-100 transition-colors group">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-purple-500 transition-colors">
+            <div className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] hover:border-purple-400/50 transition-colors group">
+                <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-purple-500 transition-colors">
                     <UserIcon size={14}/> 性别
                 </h3>
                 {isEditing ? (
-                    <select value={formData.gender || 'secret'} onChange={e => setFormData({...formData, gender: e.target.value})} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none w-full focus:border-purple-400">
+                    <select value={formData.gender || 'secret'} onChange={e => setFormData({...formData, gender: e.target.value})} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm outline-none w-full focus:border-purple-400 text-[var(--text-primary)]">
                         <option value="male">男</option>
                         <option value="female">女</option>
                         <option value="secret">保密</option>
                     </select>
                 ) : (
-                    <p className="text-slate-800 font-bold text-lg">
+                    <p className="text-[var(--text-primary)] font-bold text-lg">
                         {profile.gender === 'male' ? '♂ 男' : profile.gender === 'female' ? '♀ 女' : '🔒 保密'}
                     </p>
                 )}
             </div>
 
-            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 hover:border-purple-100 transition-colors group">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-purple-500 transition-colors">
+            <div className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] hover:border-purple-400/50 transition-colors group">
+                <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-purple-500 transition-colors">
                     <Star size={14}/> 星座
                 </h3>
                 {isEditing ? (
-                    <input value={formData.zodiac || ''} onChange={e => setFormData({...formData, zodiac: e.target.value})} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none w-full focus:border-purple-400" placeholder="例如: 天蝎座" />
+                    <input value={formData.zodiac || ''} onChange={e => setFormData({...formData, zodiac: e.target.value})} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-sm outline-none w-full focus:border-purple-400 text-[var(--text-primary)]" placeholder="例如: 天蝎座" />
                 ) : (
-                    <p className="text-slate-800 font-bold text-lg">{profile.zodiac || '未设置'}</p>
+                    <p className="text-[var(--text-primary)] font-bold text-lg">{profile.zodiac || '未设置'}</p>
                 )}
             </div>
 
