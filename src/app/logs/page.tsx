@@ -12,6 +12,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { validateImageFile } from '@/lib/constants';
 import { hasLiked, markAsLiked } from '@/lib/likes';
+import { getBookmarkStatuses } from '@/lib/bookmarks';
+import BookmarkButton from '@/components/BookmarkButton';
 
 // --- 工具函数 ---
 function cn(...inputs: ClassValue[]) {
@@ -236,6 +238,7 @@ export default function LogsPage() {
   // 交互状态
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [activeCommentId, setActiveCommentId] = useState<number | null>(null);
+  const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const init = async () => {
@@ -245,6 +248,19 @@ export default function LogsPage() {
     };
     init();
   }, []);
+
+  // 批量加载收藏状态
+  useEffect(() => {
+    async function loadBookmarkStatuses() {
+      if (!user?.id || moments.length === 0) return;
+      
+      const postIds = moments.map(m => m.id);
+      const statuses = await getBookmarkStatuses(user.id, postIds);
+      setBookmarkStatuses(prev => ({ ...prev, ...statuses }));
+    }
+    
+    loadBookmarkStatuses();
+  }, [user?.id, moments]);
 
   const fetchMoments = async () => {
     setLoading(true);
@@ -423,6 +439,13 @@ export default function LogsPage() {
                           <div className={cn("p-2 rounded-full transition-colors", activeCommentId === post.id ? "bg-purple-50" : "group-hover:bg-purple-50")}><MessageSquare size={18} className={cn(activeCommentId === post.id && "fill-purple-600 text-purple-600")}/></div>
                           <span className="text-sm font-medium">评论</span>
                         </button>
+                        
+                        {/* 收藏按钮 */}
+                        <BookmarkButton 
+                          postId={post.id} 
+                          initialBookmarked={bookmarkStatuses[post.id] || false}
+                          size="sm"
+                        />
                       </div>
 
                       <AnimatePresence>

@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
-import { Camera, Edit3, Save, Calendar, User as UserIcon, Star, Loader2, Upload, ArrowLeft } from 'lucide-react';
+import { Camera, Edit3, Save, Calendar, User as UserIcon, Star, Loader2, Upload, ArrowLeft, Bookmark } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Link from 'next/link';
+import { getBookmarkCount } from '@/lib/bookmarks';
 
 interface Profile {
   id: string;
@@ -30,6 +32,7 @@ export default function ProfilePage() {
   const [uploadingType, setUploadingType] = useState<'avatar' | 'bg' | null>(null);
   
   const [formData, setFormData] = useState<Partial<Profile>>({});
+  const [bookmarkCount, setBookmarkCount] = useState<number>(0);
 
   useEffect(() => {
     if (id) fetchProfile();
@@ -54,6 +57,10 @@ export default function ProfilePage() {
          setProfile(data);
          setFormData(data);
          setIsMe(currentUserId === data.id);
+         
+         // 获取收藏数量
+         const count = await getBookmarkCount(data.id);
+         setBookmarkCount(count);
       }
     } catch (err) {
       console.error(err);
@@ -298,6 +305,22 @@ export default function ProfilePage() {
                     <p className="text-[var(--text-primary)] font-bold text-lg">{profile.zodiac || '未设置'}</p>
                 )}
             </div>
+
+            {/* 收藏入口 */}
+            <Link 
+              href={`/u/${profile.id}/bookmarks`}
+              className="bg-[var(--bg-tertiary)] p-6 rounded-2xl border border-[var(--border-color)] hover:border-amber-400/50 transition-colors group cursor-pointer block"
+            >
+                <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-2 flex items-center gap-2 group-hover:text-amber-500 transition-colors">
+                    <Bookmark size={14}/> 收藏
+                </h3>
+                <div className="flex items-center justify-between">
+                    <p className="text-[var(--text-primary)] font-bold text-lg">{bookmarkCount} 篇文章</p>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 group-hover:text-amber-600 transition-colors">
+                        查看全部 →
+                    </span>
+                </div>
+            </Link>
 
           </motion.div>
 

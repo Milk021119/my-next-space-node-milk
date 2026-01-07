@@ -12,6 +12,7 @@ import { useParams, useRouter } from 'next/navigation';
 import PostSkeleton from '@/components/PostSkeleton';
 import ParallaxImage from '@/components/ParallaxImage';
 import Sidebar from '@/components/Sidebar';
+import BookmarkButton from '@/components/BookmarkButton';
 
 // 定义接口，防止 TS 报错
 interface Comment { 
@@ -181,8 +182,11 @@ export default function PostDetail() {
         >
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> <span>返回</span>
         </button>
-        <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase border border-slate-200 px-2 py-1 rounded">
-            日志编号 #{post.id}
+        <div className="flex items-center gap-4">
+          <BookmarkButton postId={post.id} size="md" />
+          <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase border border-slate-200 px-2 py-1 rounded">
+              日志编号 #{post.id}
+          </div>
         </div>
       </nav>
 

@@ -12,6 +12,8 @@ import { Heart, Terminal, Send } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { getAnimeCover } from '@/lib/constants';
 import { hasLiked, markAsLiked } from '@/lib/likes';
+import { getBookmarkStatuses } from '@/lib/bookmarks';
+import BookmarkButton from '@/components/BookmarkButton';
 
 interface Post {
   id: number;
@@ -42,11 +44,25 @@ export default function BlogPage() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<number, boolean>>({});
 
   // 初始化加载
   useEffect(() => {
     fetchPosts(0, true);
   }, []);
+
+  // 批量加载收藏状态
+  useEffect(() => {
+    async function loadBookmarkStatuses() {
+      if (!user?.id || posts.length === 0) return;
+      
+      const postIds = posts.map(p => p.id);
+      const statuses = await getBookmarkStatuses(user.id, postIds);
+      setBookmarkStatuses(prev => ({ ...prev, ...statuses }));
+    }
+    
+    loadBookmarkStatuses();
+  }, [user?.id, posts]);
 
   // 获取文章列表
   async function fetchPosts(pageIndex: number, reset = false) {
@@ -220,14 +236,24 @@ export default function BlogPage() {
 
                     <div className="flex items-center justify-between pt-6 border-t border-[var(--border-color)] mt-auto pointer-events-auto">
                       {/* 点赞按钮需要可点击 */}
-                      <button 
-                        onClick={(e) => handleLike(e, post.id, post.likes || 0)}
-                        disabled={hasLiked(post.id)}
-                        className={`flex items-center space-x-2 transition-colors group/like z-20 relative ${hasLiked(post.id) ? 'text-pink-500 cursor-default' : 'text-slate-400 hover:text-pink-500'}`}
-                      >
-                        <Heart size={16} className={hasLiked(post.id) || (post.likes || 0) > 0 ? 'fill-pink-500 text-pink-500' : ''} />
-                        <span className="text-xs font-bold">{post.likes || 0}</span>
-                      </button>
+                      <div className="flex items-center space-x-3">
+                        <button 
+                          onClick={(e) => handleLike(e, post.id, post.likes || 0)}
+                          disabled={hasLiked(post.id)}
+                          className={`flex items-center space-x-2 transition-colors group/like z-20 relative ${hasLiked(post.id) ? 'text-pink-500 cursor-default' : 'text-slate-400 hover:text-pink-500'}`}
+                        >
+                          <Heart size={16} className={hasLiked(post.id) || (post.likes || 0) > 0 ? 'fill-pink-500 text-pink-500' : ''} />
+                          <span className="text-xs font-bold">{post.likes || 0}</span>
+                        </button>
+                        
+                        {/* 收藏按钮 */}
+                        <BookmarkButton 
+                          postId={post.id} 
+                          initialBookmarked={bookmarkStatuses[post.id] || false}
+                          size="sm"
+                          className="z-20 relative"
+                        />
+                      </div>
                       
                       <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 group-hover:text-purple-600 flex items-center gap-1">
                         阅读全文 <Terminal size={10} />
