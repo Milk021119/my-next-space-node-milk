@@ -20,8 +20,8 @@ const GlitchText = ({ text }: { text: string }) => {
 
 // --- 组件：科技栈卡片 ---
 const TechBadge = ({ icon: Icon, label }: { icon: any, label: string }) => (
-  <div className="flex items-center gap-2 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/50 text-slate-700 text-[10px] font-bold uppercase tracking-wider shadow-sm hover:scale-105 transition-transform cursor-default">
-    <Icon size={12} className="text-purple-600" />
+  <div className="flex items-center gap-2 bg-[var(--bg-card)] backdrop-blur-sm px-3 py-1.5 rounded-lg border border-[var(--border-color)] text-[var(--text-secondary)] text-[10px] font-bold uppercase tracking-wider shadow-sm hover:scale-105 transition-transform cursor-default">
+    <Icon size={12} className="text-purple-600 dark:text-purple-400" />
     {label}
   </div>
 );
@@ -37,7 +37,7 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-[#f0f2f5] text-slate-900 font-sans selection:bg-purple-200 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans selection:bg-purple-200 dark:selection:bg-purple-800 overflow-x-hidden">
       <Sidebar />
 
       {/* --- 动态背景 --- */}
@@ -67,24 +67,24 @@ export default function HomePage() {
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               </div>
 
-              <h1 className="text-5xl lg:text-7xl font-black text-slate-800 tracking-tighter leading-[1.1]">
+              <h1 className="text-5xl lg:text-7xl font-black text-[var(--text-primary)] tracking-tighter leading-[1.1]">
                 你好，我是Milk <br/>
               </h1>
 
-              <p className="text-lg text-slate-500 max-w-xl leading-relaxed font-medium">
-                欢迎来到 <span className="text-purple-600 font-bold">SOYMILK</span>。
+              <p className="text-lg text-[var(--text-secondary)] max-w-xl leading-relaxed font-medium">
+                欢迎来到 <span className="text-purple-600 dark:text-purple-400 font-bold">SOYMILK</span>。
                 <br />
                 这里是现实与虚拟的交汇点。我用代码编织逻辑，用像素记录生活。探索未知的边界，构建数字的诗篇。
               </p>
 
               <div className="flex flex-wrap gap-4">
                 <Link href="/posts">
-                  <button className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-600 hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center gap-2 group">
+                  <button className="px-6 py-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-600 dark:hover:bg-purple-400 hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center gap-2 group">
                     开始阅读 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform"/>
                   </button>
                 </Link>
                 <Link href="/logs">
-                  <button className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors">
+                  <button className="px-6 py-3 bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-[var(--bg-tertiary)] transition-colors">
                     查看动态
                   </button>
                 </Link>
@@ -110,20 +110,20 @@ export default function HomePage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="p-8 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-sm border border-white/60 relative overflow-hidden group hover:shadow-xl transition-all duration-500"
+                className="p-8 bg-[var(--bg-card)] backdrop-blur-xl rounded-[2rem] shadow-sm border border-[var(--border-color)] relative overflow-hidden group hover:shadow-xl transition-all duration-500"
               >
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Cpu size={100} />
                 </div>
-                <h2 className="text-2xl font-black text-slate-800 mb-3">关于我(sks)</h2>
-                <p className="text-slate-500 text-sm leading-relaxed mb-6">
+                <h2 className="text-2xl font-black text-[var(--text-primary)] mb-3">关于我(sks)</h2>
+                <p className="text-[var(--text-secondary)] text-sm leading-relaxed mb-6">
                   全栈开发者 / 独立创造者 / 像素艺术家。(bushi
                   应该热衷于创造令人愉悦的交互体验。我相信代码不仅是逻辑的堆砌，更是数字世界的诗歌。(偷来的)
                 </p>
                 <div className="flex gap-3">
-                  <a href="#" className="p-2.5 bg-slate-100 rounded-full text-slate-600 hover:bg-black hover:text-white transition-colors"><Github size={18}/></a>
-                  <a href="#" className="p-2.5 bg-slate-100 rounded-full text-slate-600 hover:bg-blue-400 hover:text-white transition-colors"><Twitter size={18}/></a>
-                  <a href="mailto:your@email.com" className="p-2.5 bg-slate-100 rounded-full text-slate-600 hover:bg-purple-500 hover:text-white transition-colors"><Mail size={18}/></a>
+                  <a href="#" className="p-2.5 bg-[var(--bg-tertiary)] rounded-full text-[var(--text-secondary)] hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"><Github size={18}/></a>
+                  <a href="#" className="p-2.5 bg-[var(--bg-tertiary)] rounded-full text-[var(--text-secondary)] hover:bg-blue-400 hover:text-white transition-colors"><Twitter size={18}/></a>
+                  <a href="mailto:your@email.com" className="p-2.5 bg-[var(--bg-tertiary)] rounded-full text-[var(--text-secondary)] hover:bg-purple-500 hover:text-white transition-colors"><Mail size={18}/></a>
                 </div>
               </motion.div>
 

@@ -322,21 +322,21 @@ export default function LogsPage() {
   };
 
   return (
-    <div className="flex bg-[#f0f2f5] min-h-screen">
+    <div className="flex bg-[var(--bg-primary)] min-h-screen">
       <Sidebar />
       
       <main className="flex-1 lg:ml-64 transition-all duration-300">
         {/* Banner */}
         <div className="relative h-64 lg:h-80 bg-slate-800 overflow-hidden group">
           <img src="https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?q=80&w=2670&auto=format&fit=crop" alt="header" className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-[20s]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f0f2f5] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10 flex items-end gap-6 max-w-4xl mx-auto">
-             <div className="relative w-24 h-24 rounded-2xl bg-white/30 backdrop-blur-md p-1 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-300">
-               <img src={user?.user_metadata?.avatar_url || '/default-avatar.png'} alt="me" className="w-full h-full object-cover rounded-xl bg-white" />
+             <div className="relative w-24 h-24 rounded-2xl bg-[var(--bg-card)] backdrop-blur-md p-1 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-300">
+               <img src={user?.user_metadata?.avatar_url || '/default-avatar.png'} alt="me" className="w-full h-full object-cover rounded-xl bg-[var(--bg-secondary)]" />
              </div>
              <div className="mb-4">
-                <h1 className="text-3xl font-bold text-slate-800 mix-blend-hard-light">我的动态</h1>
-                <p className="text-slate-600 font-medium">记录赛博空间的时间碎片</p>
+                <h1 className="text-3xl font-bold text-[var(--text-primary)] mix-blend-hard-light">我的动态</h1>
+                <p className="text-[var(--text-secondary)] font-medium">记录赛博空间的时间碎片</p>
              </div>
           </div>
         </div>
@@ -344,10 +344,10 @@ export default function LogsPage() {
         {/* 主内容 */}
         <div className="max-w-3xl mx-auto px-4 lg:px-8 py-8 -mt-8 relative z-10">
           {user && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 shadow-sm border border-white/60 mb-10">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl p-5 shadow-sm border border-[var(--border-color)] mb-10">
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="分享当下的想法..." className="w-full h-20 bg-transparent resize-none outline-none text-slate-700 placeholder:text-slate-400 text-base" />
+                  <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="分享当下的想法..." className="w-full h-20 bg-transparent resize-none outline-none text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] text-base" />
                   {uploadFiles.length > 0 && (
                     <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
                       {uploadFiles.map((file, i) => (
@@ -383,7 +383,7 @@ export default function LogsPage() {
                         }} 
                       />
                     </div>
-                    <button onClick={handlePublish} disabled={isPublishing || (!newContent && uploadFiles.length === 0)} className="bg-slate-900 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-purple-900/10 hover:shadow-purple-900/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={handlePublish} disabled={isPublishing || (!newContent && uploadFiles.length === 0)} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-purple-900/10 hover:shadow-purple-900/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                       {isPublishing ? <Loader2 size={16} className="animate-spin"/> : <Send size={16} />} <span>发布</span>
                     </button>
                   </div>
@@ -393,23 +393,23 @@ export default function LogsPage() {
           )}
 
           <div className="space-y-8">
-            {loading ? <div className="text-center py-20 text-slate-400"><Loader2 className="w-8 h-8 animate-spin mx-auto"/></div> : moments.map((post) => {
+            {loading ? <div className="text-center py-20 text-[var(--text-muted)]"><Loader2 className="w-8 h-8 animate-spin mx-auto"/></div> : moments.map((post) => {
               const { text, images } = extractImages(post.content);
               return (
-                <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} key={post.id} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100/50">
+                <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} key={post.id} className="bg-[var(--bg-secondary)] rounded-3xl p-6 shadow-sm border border-[var(--border-color)]">
                   <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex-shrink-0 overflow-hidden">
+                    <div className="w-12 h-12 rounded-full bg-[var(--bg-tertiary)] flex-shrink-0 overflow-hidden">
                       <img src={post.profiles?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between mb-1">
-                        <h3 className="font-bold text-slate-900">{post.profiles?.username || '未知用户'}</h3>
-                        <span className="text-xs text-slate-400 font-mono">{format(new Date(post.created_at), 'MM-dd HH:mm')}</span>
+                        <h3 className="font-bold text-[var(--text-primary)]">{post.profiles?.username || '未知用户'}</h3>
+                        <span className="text-xs text-[var(--text-muted)] font-mono">{format(new Date(post.created_at), 'MM-dd HH:mm')}</span>
                       </div>
-                      <div className="prose prose-slate prose-sm max-w-none text-slate-600 mb-3"><ReactMarkdown>{text}</ReactMarkdown></div>
+                      <div className="prose prose-slate dark:prose-invert prose-sm max-w-none text-[var(--text-secondary)] mb-3"><ReactMarkdown>{text}</ReactMarkdown></div>
                       <ImageGrid images={images} onImageClick={setLightboxSrc} />
                       
-                      <div className="mt-4 flex items-center gap-6 border-t border-slate-50 pt-3">
+                      <div className="mt-4 flex items-center gap-6 border-t border-[var(--border-color)] pt-3">
                         <button 
                           onClick={() => handleLike(post.id, post.likes)} 
                           disabled={hasLiked(post.id)}

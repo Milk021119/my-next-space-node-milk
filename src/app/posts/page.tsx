@@ -118,12 +118,12 @@ export default function BlogPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#f0f2f5] text-slate-900 font-sans selection:bg-purple-200 overflow-x-hidden">
+    <div className="relative min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans selection:bg-purple-200 dark:selection:bg-purple-800 overflow-x-hidden">
       
       {/* 🔮 背景特效 */}
       <div className="fixed inset-0 overflow-hidden -z-10">
-        <motion.div animate={{ x: [0, 50, 0], y: [0, 30, 0] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] bg-cyan-100/40 rounded-full blur-[120px]" />
-        <motion.div animate={{ x: [0, -50, 0], y: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }} className="absolute -bottom-[10%] -right-[10%] w-[60%] h-[60%] bg-pink-100/40 rounded-full blur-[120px]" />
+        <motion.div animate={{ x: [0, 50, 0], y: [0, 30, 0] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] bg-cyan-100/40 dark:bg-cyan-900/20 rounded-full blur-[120px]" />
+        <motion.div animate={{ x: [0, -50, 0], y: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }} className="absolute -bottom-[10%] -right-[10%] w-[60%] h-[60%] bg-pink-100/40 dark:bg-pink-900/20 rounded-full blur-[120px]" />
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
@@ -138,18 +138,18 @@ export default function BlogPage() {
           <AnimatePresence>
             {user && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-16">
-                <div className="p-6 bg-white/60 backdrop-blur-md rounded-[2rem] border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-500">
+                <div className="p-6 bg-[var(--bg-card)] backdrop-blur-md rounded-[2rem] border border-[var(--border-color)] shadow-xl hover:shadow-2xl transition-all duration-500">
                   <div className="flex items-center space-x-2 mb-6 text-purple-500/60"><Terminal size={14} /><span className="text-[10px] font-bold uppercase tracking-widest">发布新文章</span></div>
                   <div className="flex flex-col gap-4">
-                      <input id="post-title" type="text" placeholder="输入文章标题..." className="w-full bg-transparent text-xl font-black outline-none placeholder:text-slate-300" />
+                      <input id="post-title" type="text" placeholder="输入文章标题..." className="w-full bg-transparent text-xl font-black outline-none placeholder:text-[var(--text-muted)] text-[var(--text-primary)]" />
                       <div className="flex gap-4">
-                          <input id="post-tags" type="text" placeholder="标签 (如: Code, Life)" className="flex-1 bg-white/50 rounded-lg px-4 py-2 text-sm font-mono text-purple-600 outline-none placeholder:text-slate-300" />
-                          <input id="post-cover" type="text" placeholder="封面图链接 (可选)" className="flex-1 bg-white/50 rounded-lg px-4 py-2 text-sm text-slate-600 outline-none placeholder:text-slate-300" />
+                          <input id="post-tags" type="text" placeholder="标签 (如: Code, Life)" className="flex-1 bg-[var(--bg-tertiary)] rounded-lg px-4 py-2 text-sm font-mono text-purple-600 dark:text-purple-400 outline-none placeholder:text-[var(--text-muted)]" />
+                          <input id="post-cover" type="text" placeholder="封面图链接 (可选)" className="flex-1 bg-[var(--bg-tertiary)] rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] outline-none placeholder:text-[var(--text-muted)]" />
                       </div>
-                      <textarea id="post-content" placeholder="在此输入正文 (支持 Markdown)..." className="w-full bg-transparent text-slate-600 outline-none h-24 resize-none font-medium placeholder:text-slate-300 font-mono text-sm p-2"></textarea>
+                      <textarea id="post-content" placeholder="在此输入正文 (支持 Markdown)..." className="w-full bg-transparent text-[var(--text-secondary)] outline-none h-24 resize-none font-medium placeholder:text-[var(--text-muted)] font-mono text-sm p-2"></textarea>
                   </div>
                   <div className="flex justify-end mt-4">
-                    <button onClick={handlePublish} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-lg flex items-center gap-2">
+                    <button onClick={handlePublish} className="px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-lg flex items-center gap-2">
                       <Send size={12} /> 发布文章
                     </button>
                   </div>
@@ -170,7 +170,7 @@ export default function BlogPage() {
                   whileInView={{ opacity: 1, y: 0 }} 
                   viewport={{ once: true, margin: "-50px" }}
                   whileHover={{ y: -8 }} 
-                  className="relative group flex flex-col h-full bg-white/40 backdrop-blur-md rounded-[2rem] border border-white/60 shadow-sm hover:shadow-2xl hover:bg-white/70 transition-all duration-500 overflow-hidden"
+                  className="relative group flex flex-col h-full bg-[var(--bg-card)] backdrop-blur-md rounded-[2rem] border border-[var(--border-color)] shadow-sm hover:shadow-2xl hover:bg-[var(--bg-card-hover)] transition-all duration-500 overflow-hidden"
                 >
                   {/* 1. 全局链接：铺满整个卡片，设为绝对定位且层级较低 */}
                   <Link 
@@ -210,15 +210,15 @@ export default function BlogPage() {
                       </div>
                     </div>
 
-                    <h2 className="text-2xl font-black tracking-tighter mb-4 text-slate-800 group-hover:text-purple-700 transition-colors leading-tight">
+                    <h2 className="text-2xl font-black tracking-tighter mb-4 text-[var(--text-primary)] group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors leading-tight">
                       {post.title}
                     </h2>
                     
-                    <p className="flex-1 text-slate-500 text-sm leading-relaxed line-clamp-3 mb-6 opacity-70 font-medium">
+                    <p className="flex-1 text-[var(--text-secondary)] text-sm leading-relaxed line-clamp-3 mb-6 opacity-70 font-medium">
                       {post.content.slice(0, 150)}{post.content.length > 150 ? '...' : ''}
                     </p>
 
-                    <div className="flex items-center justify-between pt-6 border-t border-slate-100/50 mt-auto pointer-events-auto">
+                    <div className="flex items-center justify-between pt-6 border-t border-[var(--border-color)] mt-auto pointer-events-auto">
                       {/* 点赞按钮需要可点击 */}
                       <button 
                         onClick={(e) => handleLike(e, post.id, post.likes || 0)}
@@ -243,14 +243,14 @@ export default function BlogPage() {
             <div className="mt-32 flex justify-center">
               <button 
                 onClick={() => { const next = page + 1; setPage(next); fetchPosts(next); }}
-                className="px-8 py-3 bg-white/50 rounded-full text-xs font-black text-slate-400 uppercase tracking-widest hover:bg-white hover:text-purple-600 transition-all shadow-sm"
+                className="px-8 py-3 bg-[var(--bg-card)] rounded-full text-xs font-black text-[var(--text-muted)] uppercase tracking-widest hover:bg-[var(--bg-secondary)] hover:text-purple-600 transition-all shadow-sm"
               >
                 加载更多
               </button>
             </div>
           )}
 
-          <footer className="mt-40 pb-20 text-center text-[10px] text-slate-300 font-black tracking-[0.5em] uppercase opacity-50">
+          <footer className="mt-40 pb-20 text-center text-[10px] text-[var(--text-muted)] font-black tracking-[0.5em] uppercase opacity-50">
               --- End of Signal ---
           </footer>
         </div>

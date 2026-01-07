@@ -6,6 +6,7 @@ import "./globals.css";
 import LoadingScreen from "@/components/LoadingScreen";
 import CommandPalette from "@/components/CommandPalette";
 import { PlayerProvider } from "@/context/PlayerContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,22 +46,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-[#f0f2f5]`}>
-        <PlayerProvider>
-          
-          {/* 1. 开机动画 (通常 z-index: 50~100) */}
-          <LoadingScreen />
-          
-          {/* 2. 全局搜索 (通常 z-index: 50, 需确保比聊天室高) */}
-          <div className="relative z-[100]"> 
-             <CommandPalette />
-          </div>
-          
-          {/* 3. 页面主体 */}
-          {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} bg-[var(--bg-primary)]`}>
+        <ThemeProvider>
+          <PlayerProvider>
+            
+            {/* 1. 开机动画 (通常 z-index: 50~100) */}
+            <LoadingScreen />
+            
+            {/* 2. 全局搜索 (通常 z-index: 50, 需确保比聊天室高) */}
+            <div className="relative z-[100]"> 
+               <CommandPalette />
+            </div>
+            
+            {/* 3. 页面主体 */}
+            {children}
 
-        </PlayerProvider>
+          </PlayerProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
