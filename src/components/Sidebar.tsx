@@ -50,8 +50,8 @@ export default function Sidebar() {
     });
   }
 
-  // 简单的管理员判断
-  const isAdmin = user?.email === 's2285627839@outlook.com' || user?.user_metadata?.is_admin === true;
+  // 管理员判断：只依赖数据库字段，不硬编码邮箱
+  const isAdmin = user?.user_metadata?.is_admin === true;
   if (isAdmin) {
     navItems.push({
       name: '后台管理',

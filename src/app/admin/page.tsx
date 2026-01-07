@@ -75,15 +75,12 @@ export default function AdminPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push('/'); return; }
       
+      // 只依赖数据库 is_admin 字段，不硬编码邮箱
       const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
-      const isEmailMatch = user.email === 's2285627839@outlook.com';
       
-      if (profile?.is_admin || isEmailMatch) {
+      if (profile?.is_admin) {
         setIsAdmin(true);
         fetchOverview();
-        if (isEmailMatch && !profile?.is_admin) {
-           await supabase.from('profiles').update({ is_admin: true }).eq('id', user.id);
-        }
       } else {
         setVerifying(false); 
       }

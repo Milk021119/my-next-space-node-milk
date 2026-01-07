@@ -10,8 +10,30 @@ import { PlayerProvider } from "@/context/PlayerContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SOYMILK | Digital Frontier",
-  description: "Personal digital space for thoughts, code, and moments.",
+  title: {
+    default: "SOYMILK | 个人数字空间",
+    template: "%s | SOYMILK"
+  },
+  description: "记录代码、想法与生活的个人博客空间",
+  keywords: ["博客", "技术", "编程", "生活", "SOYMILK"],
+  authors: [{ name: "SOYMILK" }],
+  creator: "SOYMILK",
+  openGraph: {
+    type: "website",
+    locale: "zh_CN",
+    siteName: "SOYMILK",
+    title: "SOYMILK | 个人数字空间",
+    description: "记录代码、想法与生活的个人博客空间",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SOYMILK | 个人数字空间",
+    description: "记录代码、想法与生活的个人博客空间",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: "/favicon.ico",
   },

@@ -10,6 +10,8 @@ import ReactMarkdown from 'react-markdown';
 import Sidebar from '@/components/Sidebar';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { validateImageFile } from '@/lib/constants';
+import { hasLiked, markAsLiked } from '@/lib/likes';
 
 // --- 工具函数 ---
 function cn(...inputs: ClassValue[]) {
@@ -263,9 +265,16 @@ export default function LogsPage() {
     try {
       const uploadedUrls: string[] = [];
       for (const file of uploadFiles) {
+        // 验证文件类型和大小
+        const validation = validateImageFile(file);
+        if (!validation.valid) {
+          alert(validation.error);
+          setIsPublishing(false);
+          return;
+        }
+        
         const fileExt = file.name.split('.').pop();
         const fileName = `logs/${user.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-        // ⚠️ 请确保你的 Supabase Storage Bucket 名称正确 (此处默认为 'avatars')
         const { error: uploadErr } = await supabase.storage.from('avatars').upload(fileName, file); 
         if (!uploadErr) {
           const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
@@ -294,15 +303,21 @@ export default function LogsPage() {
       fetchMoments();
     } catch (err) {
       console.error(err);
-      alert('发布失败，请检查控制台');
+      alert('发布失败，请稍后重试');
     } finally {
       setIsPublishing(false);
     }
   };
 
   const handleLike = async (id: number, currentLikes: number) => {
+    // 检查是否已点赞
+    if (hasLiked(id)) {
+      return;
+    }
+    
     const newLikes = currentLikes + 1;
     setMoments(prev => prev.map(m => m.id === id ? { ...m, likes: newLikes } : m));
+    markAsLiked(id);
     await supabase.from('posts').update({ likes: newLikes }).eq('id', id);
   };
 
@@ -346,7 +361,27 @@ export default function LogsPage() {
                   <div className="flex justify-between items-center pt-3 border-t border-slate-100">
                     <div className="flex gap-2">
                       <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-purple-50 text-purple-600 rounded-full transition-colors"><ImageIcon size={20} /></button>
-                      <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={(e) => { const files = e.target.files; if (files) setUploadFiles(prev => [...prev, ...Array.from(files)]); }} />
+                      <input 
+                        type="file" 
+                        multiple 
+                        accept="image/jpeg,image/png,image/gif,image/webp" 
+                        className="hidden" 
+                        ref={fileInputRef} 
+                        onChange={(e) => { 
+                          const files = e.target.files; 
+                          if (files) {
+                            const validFiles = Array.from(files).filter(file => {
+                              const validation = validateImageFile(file);
+                              if (!validation.valid) {
+                                alert(validation.error);
+                                return false;
+                              }
+                              return true;
+                            });
+                            setUploadFiles(prev => [...prev, ...validFiles]);
+                          }
+                        }} 
+                      />
                     </div>
                     <button onClick={handlePublish} disabled={isPublishing || (!newContent && uploadFiles.length === 0)} className="bg-slate-900 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-purple-900/10 hover:shadow-purple-900/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                       {isPublishing ? <Loader2 size={16} className="animate-spin"/> : <Send size={16} />} <span>发布</span>
@@ -375,8 +410,12 @@ export default function LogsPage() {
                       <ImageGrid images={images} onImageClick={setLightboxSrc} />
                       
                       <div className="mt-4 flex items-center gap-6 border-t border-slate-50 pt-3">
-                        <button onClick={() => handleLike(post.id, post.likes)} className="group flex items-center gap-1.5 text-slate-400 hover:text-pink-500 transition-colors">
-                          <div className="p-2 rounded-full group-hover:bg-pink-50 transition-colors"><Heart size={18} className={cn(post.likes > 0 && "fill-pink-500 text-pink-500")} /></div>
+                        <button 
+                          onClick={() => handleLike(post.id, post.likes)} 
+                          disabled={hasLiked(post.id)}
+                          className={`group flex items-center gap-1.5 transition-colors ${hasLiked(post.id) ? 'text-pink-500 cursor-default' : 'text-slate-400 hover:text-pink-500'}`}
+                        >
+                          <div className="p-2 rounded-full group-hover:bg-pink-50 transition-colors"><Heart size={18} className={cn((hasLiked(post.id) || post.likes > 0) && "fill-pink-500 text-pink-500")} /></div>
                           <span className="text-sm font-medium">{post.likes || '赞'}</span>
                         </button>
                         

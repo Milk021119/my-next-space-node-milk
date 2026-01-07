@@ -10,10 +10,8 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { Heart, Terminal, Send } from 'lucide-react'; 
 import React, { useState, useEffect } from 'react';
-
-// 封面图数组
-const ANIME_COVERS = ["/covers/cimgtwjgu000szrs56jyqr0mg.1200.jpg", "/covers/cit9ejr5100c6z35nrc61fd7j.1200.jpg", "/covers/ciuur1ym5000cbsjb09bof78s.1200.jpg", "/covers/claodyl1v0068m78hgrbs3myq.2160p.jpg", "/covers/clba9t5hw007qm78hd3cocnrm.2160p.jpg", "/covers/clbihqun3007ym78h7rsq6cda.2160p.jpg", "/covers/clc7emns2000w6v8hdu5d1k17.2160p.jpg", "/covers/cm7rftv17000hkl8h1gjn9e1v.2160p.jpg", "/covers/cm9lnaup3001ikl8h044j19za.2160p.jpg", "/covers/cm9za5ads001skl8h125v2zrw.2160p.jpg", "/covers/cmabaj7od001xkl8hbdm96tlk.2160p.jpg", "/covers/cmatsfxm100041k8h93jd61z7.2160p.jpg", "/covers/cmbmb7mr3000f1k8hefiqenx7.2160p.jpg", "/covers/cmju6k1jb00168w8hcb4pgdnd.2160p.jpg"];
-const getAnimeCover = (id: number) => ANIME_COVERS[id % ANIME_COVERS.length];
+import { getAnimeCover } from '@/lib/constants';
+import { hasLiked, markAsLiked } from '@/lib/likes';
 
 interface Post {
   id: number;
@@ -71,13 +69,21 @@ export default function BlogPage() {
     setLoading(false);
   }
 
-  // 点赞逻辑
+  // 点赞逻辑 - 添加防重复点赞
   async function handleLike(e: React.MouseEvent, postId: number, currentLikes: number) {
     e.preventDefault(); 
     e.stopPropagation();
+    
+    // 检查是否已点赞
+    if (hasLiked(postId)) {
+      return; // 已点赞，不执行
+    }
+    
     const newLikes = (currentLikes || 0) + 1;
     // 乐观更新
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: newLikes } : p));
+    // 记录点赞
+    markAsLiked(postId);
     await supabase.from('posts').update({ likes: newLikes }).eq('id', postId);
   }
 
@@ -216,9 +222,10 @@ export default function BlogPage() {
                       {/* 点赞按钮需要可点击 */}
                       <button 
                         onClick={(e) => handleLike(e, post.id, post.likes || 0)}
-                        className="flex items-center space-x-2 text-slate-400 hover:text-pink-500 transition-colors group/like z-20 relative"
+                        disabled={hasLiked(post.id)}
+                        className={`flex items-center space-x-2 transition-colors group/like z-20 relative ${hasLiked(post.id) ? 'text-pink-500 cursor-default' : 'text-slate-400 hover:text-pink-500'}`}
                       >
-                        <Heart size={16} className={(post.likes || 0) > 0 ? 'fill-pink-500 text-pink-500' : ''} />
+                        <Heart size={16} className={hasLiked(post.id) || (post.likes || 0) > 0 ? 'fill-pink-500 text-pink-500' : ''} />
                         <span className="text-xs font-bold">{post.likes || 0}</span>
                       </button>
                       
