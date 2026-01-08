@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { ArrowLeft, Clock, User, Tag } from 'lucide-react';
+import { ArrowLeft, Clock, User, Tag, BookOpen } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import PostSkeleton from '@/components/PostSkeleton';
 import ParallaxImage from '@/components/ParallaxImage';
@@ -16,6 +16,8 @@ import BookmarkButton from '@/components/BookmarkButton';
 import CommentSection from '@/components/comments/CommentSection';
 import ReadingProgress from '@/components/ReadingProgress';
 import ShareButton from '@/components/ShareButton';
+import TableOfContents from '@/components/TableOfContents';
+import { calculateReadingTime, formatWordCount } from '@/lib/readingTime';
 
 interface Post {
   id: number;
@@ -66,10 +68,14 @@ export default function PostDetail() {
       </div>
   );
 
+  // 计算阅读时间
+  const readingTime = calculateReadingTime(post.content);
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] font-sans selection:bg-purple-200 dark:selection:bg-purple-800 pb-20">
       <Sidebar />
       <ReadingProgress />
+      <TableOfContents content={post.content} />
       
       {/* 顶部透明导航 */}
       <nav className="fixed top-1 right-0 left-0 lg:left-72 2xl:left-80 z-30 px-6 py-4 flex justify-between items-center bg-[var(--bg-primary)]/70 backdrop-blur-xl border-b border-[var(--border-color)] transition-all duration-300">
@@ -127,6 +133,9 @@ export default function PostDetail() {
                   <span className="flex items-center gap-2">
                       <User size={14} /> {post.author_email?.split('@')[0]}
                   </span>
+                  <span className="flex items-center gap-2">
+                      <BookOpen size={14} /> {readingTime.text} · {formatWordCount(readingTime.words)}
+                  </span>
               </div>
             </div>
 
@@ -143,7 +152,28 @@ export default function PostDetail() {
                 prose-strong:text-[var(--text-primary)]
                 prose-li:text-[var(--text-secondary)]
             ">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ children, ...props }) => {
+                      const text = String(children);
+                      const id = `heading-${post.content.split('\n').findIndex(line => line.includes(text))}-${text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')}`;
+                      return <h1 id={id} {...props}>{children}</h1>;
+                    },
+                    h2: ({ children, ...props }) => {
+                      const text = String(children);
+                      const id = `heading-${post.content.split('\n').findIndex(line => line.includes(text))}-${text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')}`;
+                      return <h2 id={id} {...props}>{children}</h2>;
+                    },
+                    h3: ({ children, ...props }) => {
+                      const text = String(children);
+                      const id = `heading-${post.content.split('\n').findIndex(line => line.includes(text))}-${text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')}`;
+                      return <h3 id={id} {...props}>{children}</h3>;
+                    },
+                  }}
+                >
+                  {post.content}
+                </ReactMarkdown>
             </article>
 
             {/* 评论区 */}
