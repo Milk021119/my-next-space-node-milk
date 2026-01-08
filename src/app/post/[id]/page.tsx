@@ -14,6 +14,8 @@ import ParallaxImage from '@/components/ParallaxImage';
 import Sidebar from '@/components/Sidebar';
 import BookmarkButton from '@/components/BookmarkButton';
 import CommentSection from '@/components/comments/CommentSection';
+import ReadingProgress from '@/components/ReadingProgress';
+import ShareButton from '@/components/ShareButton';
 
 interface Post {
   id: number;
@@ -67,16 +69,18 @@ export default function PostDetail() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] font-sans selection:bg-purple-200 dark:selection:bg-purple-800 pb-20">
       <Sidebar />
+      <ReadingProgress />
       
       {/* 顶部透明导航 */}
-      <nav className="fixed top-0 right-0 left-0 lg:left-72 2xl:left-80 z-30 px-6 py-4 flex justify-between items-center bg-[var(--bg-primary)]/70 backdrop-blur-xl border-b border-[var(--border-color)] transition-all duration-300">
+      <nav className="fixed top-1 right-0 left-0 lg:left-72 2xl:left-80 z-30 px-6 py-4 flex justify-between items-center bg-[var(--bg-primary)]/70 backdrop-blur-xl border-b border-[var(--border-color)] transition-all duration-300">
         <button 
             onClick={() => router.back()} 
             className="p-2 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] rounded-full transition-all flex items-center gap-2 text-[var(--text-secondary)] font-bold text-xs uppercase tracking-wider shadow-sm border border-[var(--border-color)] group"
         >
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> <span>返回</span>
         </button>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ShareButton title={post.title} />
           <BookmarkButton postId={post.id} size="md" />
           <div className="text-[10px] font-black tracking-widest text-[var(--text-muted)] uppercase border border-[var(--border-color)] px-2 py-1 rounded">
               日志编号 #{post.id}

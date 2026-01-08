@@ -46,7 +46,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <link rel="alternate" type="application/rss+xml" title="SOYMILK RSS" href="/feed.xml" />
+      </head>
       <body className={`${inter.className} bg-[var(--bg-primary)]`}>
         <ThemeProvider>
           <PlayerProvider>

@@ -14,7 +14,8 @@ import {
   Menu, 
   X,
   User,
-  Radio
+  Radio,
+  Rss
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -134,9 +135,17 @@ export default function Sidebar() {
             
             <MiniPlayer />
 
-            {/* 主题切换按钮 */}
-            <div className="flex justify-center">
+            {/* 主题切换和 RSS */}
+            <div className="flex justify-center items-center gap-3">
               <ThemeToggle />
+              <a 
+                href="/feed.xml" 
+                target="_blank"
+                className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                title="RSS 订阅"
+              >
+                <Rss size={18} />
+              </a>
             </div>
 
             {user ? (
