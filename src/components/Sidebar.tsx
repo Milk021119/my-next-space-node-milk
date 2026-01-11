@@ -16,7 +16,8 @@ import {
   User,
   Radio,
   Rss,
-  Archive
+  Archive,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -29,7 +30,6 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useCurrentUser();
   const [isOpen, setIsOpen] = useState(false);
-  // ✨ 新增：控制登录弹窗的状态
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -45,7 +45,6 @@ export default function Sidebar() {
     { name: '归档', path: '/archive', icon: Archive },
   ];
 
-  // 动态菜单逻辑
   if (user) {
     navItems.push({
       name: '个人中心',
@@ -54,7 +53,6 @@ export default function Sidebar() {
     });
   }
 
-  // 管理员判断：只依赖数据库字段，不硬编码邮箱
   const isAdmin = user?.user_metadata?.is_admin === true;
   if (isAdmin) {
     navItems.push({
@@ -66,17 +64,27 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ✨ 挂载登录弹窗组件 */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
       {/* 移动端汉堡菜单 */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button 
+        <motion.button 
+          whileTap={{ scale: 0.95 }}
           onClick={() => setIsOpen(!isOpen)} 
-          className="p-3 bg-[var(--bg-card)] backdrop-blur-md rounded-xl shadow-lg border border-[var(--border-color)] text-[var(--text-primary)]"
+          className="p-3 bg-[var(--bg-card)] backdrop-blur-xl rounded-2xl shadow-lg border border-[var(--border-color)] text-[var(--text-primary)] hover:shadow-xl transition-shadow"
         >
-          {isOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+          <AnimatePresence mode="wait">
+            {isOpen ? (
+              <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
+                <X size={20} />
+              </motion.div>
+            ) : (
+              <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
+                <Menu size={20} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
       </div>
 
       {/* 侧边栏容器 */}
@@ -87,116 +95,148 @@ export default function Sidebar() {
           lg:shadow-none lg:translate-x-0 lg:fixed transition-transform duration-300 ease-in-out`}
         style={{ x: undefined }}
       >
-        <div className="h-full flex flex-col px-6 py-6">
+        <div className="h-full flex flex-col px-5 py-6">
           
           {/* Logo 区域 */}
-          <div className="flex-shrink-0 mb-8 flex items-center gap-3 px-2">
-            <div className="w-10 h-10 bg-slate-900 dark:bg-slate-100 rounded-xl flex items-center justify-center text-white dark:text-slate-900 shadow-md shadow-purple-900/20">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-shrink-0 mb-8 flex items-center gap-3 px-2"
+          >
+            <div className="w-11 h-11 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30 rotate-3 hover:rotate-0 transition-transform">
               <span className="font-black text-lg">S</span>
             </div>
             <div>
-              <h1 className="font-black text-xl tracking-tighter text-[var(--text-primary)]">SOYMILK</h1>
-              <p className="text-[10px] font-bold text-[var(--text-muted)] tracking-[0.2em] uppercase">个人数字空间</p>
+              <h1 className="font-black text-xl tracking-tight text-[var(--text-primary)]">SOYMILK</h1>
+              <p className="text-[10px] font-bold text-[var(--text-muted)] tracking-[0.15em] uppercase flex items-center gap-1">
+                <Sparkles size={10} className="text-purple-500" />
+                个人数字空间
+              </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* 导航菜单 */}
-          <nav className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-            {navItems.map((item) => {
+          <nav className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-2 scrollbar-thin scrollbar-thumb-[var(--border-color)]">
+            {navItems.map((item, index) => {
               const isActive = pathname === item.path || (item.path !== '/' && pathname?.startsWith(item.path));
               const Icon = item.icon;
 
               return (
-                <Link key={item.name} href={item.path} onClick={() => setIsOpen(false)} className="block w-full">
-                  <div 
-                    className={`relative flex items-center space-x-4 p-4 rounded-xl text-xs font-black tracking-widest transition-all duration-300 group overflow-hidden
-                      ${isActive 
-                        ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg shadow-purple-900/20' 
-                        : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] hover:shadow-sm'
-                      }`}
-                  >
-                    {isActive && (
-                      <motion.div 
-                        layoutId="active-nav"
-                        className="absolute inset-0 bg-slate-900 dark:bg-slate-100 z-0"
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      />
-                    )}
-                    
-                    <div className="relative z-10 flex items-center gap-4">
-                      <Icon size={18} className={isActive ? "text-purple-400 dark:text-purple-600" : "group-hover:text-purple-600 transition-colors"} />
+                <motion.div
+                  key={item.name}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Link href={item.path} onClick={() => setIsOpen(false)} className="block w-full">
+                    <motion.div 
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`relative flex items-center gap-4 p-4 rounded-2xl text-sm font-bold transition-all duration-300 group overflow-hidden
+                        ${isActive 
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25' 
+                          : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
+                        }`}
+                    >
+                      <div className={`p-2 rounded-xl transition-colors ${isActive ? 'bg-white/20' : 'bg-[var(--bg-tertiary)] group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30'}`}>
+                        <Icon size={18} className={isActive ? "text-white" : "text-[var(--text-muted)] group-hover:text-purple-600 dark:group-hover:text-purple-400"} />
+                      </div>
                       <span>{item.name}</span>
-                    </div>
-                  </div>
-                </Link>
+                      {isActive && (
+                        <motion.div 
+                          layoutId="nav-indicator"
+                          className="absolute right-3 w-1.5 h-1.5 bg-white rounded-full"
+                        />
+                      )}
+                    </motion.div>
+                  </Link>
+                </motion.div>
               );
             })}
           </nav>
 
           {/* 底部区域 */}
-          <div className="flex-shrink-0 mt-6 pt-6 border-t border-[var(--border-color)] space-y-6 bg-transparent">
+          <div className="flex-shrink-0 mt-6 pt-6 border-t border-[var(--border-color)] space-y-5">
             
             <NeteasePlayer />
 
             {/* 主题切换和 RSS */}
-            <div className="flex justify-center items-center gap-3">
+            <div className="flex justify-center items-center gap-2">
               <ThemeToggle />
-              <a 
+              <motion.a 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 href="/feed.xml" 
                 target="_blank"
-                className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                className="p-2.5 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all border border-[var(--border-color)] hover:border-orange-200 dark:hover:border-orange-800"
                 title="RSS 订阅"
               >
                 <Rss size={18} />
-              </a>
+              </motion.a>
             </div>
 
             {user ? (
-              <div className="flex items-center gap-3 p-3 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow">
-                 <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden border border-[var(--border-color)] flex-shrink-0">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 p-3 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] shadow-sm hover:shadow-md transition-all group"
+              >
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 p-0.5 shadow-md">
                     <img 
                       src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.email}`} 
                       alt="avatar" 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover rounded-[10px] bg-[var(--bg-tertiary)]"
                     />
-                 </div>
-                 <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold text-[var(--text-primary)] truncate">
-                      {user.user_metadata?.username || user.email?.split('@')[0]}
-                    </div>
-                    <div className="text-[10px] text-[var(--text-muted)] truncate flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
-                      在线
-                    </div>
-                 </div>
-                 <button 
-                   onClick={handleLogout}
-                   className="p-2 text-[var(--text-muted)] hover:text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                   title="退出登录"
-                 >
-                   <LogOut size={16} />
-                 </button>
-              </div>
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[var(--bg-secondary)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-[var(--text-primary)] truncate">
+                    {user.user_metadata?.username || user.email?.split('@')[0]}
+                  </div>
+                  <div className="text-[10px] text-green-500 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    在线
+                  </div>
+                </div>
+                <motion.button 
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleLogout}
+                  className="p-2 text-[var(--text-muted)] hover:text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
+                  title="退出登录"
+                >
+                  <LogOut size={16} />
+                </motion.button>
+              </motion.div>
             ) : (
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setIsLoginOpen(true)}
-                className="flex items-center justify-center gap-2 p-3 w-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-xs font-bold uppercase hover:bg-purple-600 dark:hover:bg-purple-400 transition-colors shadow-lg shadow-slate-900/10"
+                className="flex items-center justify-center gap-2 p-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl text-sm font-bold hover:shadow-lg hover:shadow-purple-500/25 transition-all"
               >
-                <User size={16} />
+                <User size={18} />
                 <span>登录 / 注册</span>
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
       </motion.aside>
 
       {/* 移动端遮罩 */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-30 lg:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -321,50 +321,100 @@ export default function ChatPage() {
 
 
   return (
-    <PageLayout maxWidth="full" className="py-8 lg:py-12">
+    <PageLayout maxWidth="full" className="pt-0">
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
       
-      {/* 页面标题 */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center gap-3 mb-2">
-          <Radio size={20} className="text-[var(--accent-color)]" />
-          <h1 className="text-3xl lg:text-4xl font-black text-[var(--text-primary)] tracking-tight">
-            聊天室
-          </h1>
-          <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-            在线
-          </span>
-        </div>
-        <p className="text-[var(--text-secondary)]">与社区成员实时交流</p>
-      </motion.div>
-
-      {/* 主体布局 */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-280px)] min-h-[500px]">
-        
-        {/* 左侧：频道和私信列表 */}
-        <div className="lg:col-span-1 bg-[var(--bg-card)] backdrop-blur-xl rounded-2xl border border-[var(--border-color)] overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-[var(--border-color)]">
-            <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">频道</h3>
+      {/* 美化页面头部 Banner */}
+      <div className="relative -mx-6 lg:-mx-10 -mt-12 mb-8">
+        <div className="h-48 lg:h-56 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 overflow-hidden">
+          {/* 装饰图案 */}
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px]" />
+            <div className="absolute top-10 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-10 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl" />
           </div>
           
-          <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          {/* 浮动装饰 */}
+          <motion.div 
+            animate={{ y: [0, -15, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-12 right-[15%] text-white/20"
+          >
+            <Radio size={48} />
+          </motion.div>
+          <motion.div 
+            animate={{ y: [0, 12, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute bottom-16 left-[10%] text-white/15"
+          >
+            <MessageSquare size={36} />
+          </motion.div>
+        </div>
+        
+        {/* 底部渐变 */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
+        
+        {/* 内容 */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-end gap-4"
+            >
+              <div className="p-4 bg-white/90 dark:bg-slate-800/90 rounded-2xl shadow-xl">
+                <Radio size={28} className="text-emerald-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-2xl lg:text-3xl font-black text-[var(--text-primary)]">
+                    聊天室
+                  </h1>
+                  <span className="px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    在线
+                  </span>
+                </div>
+                <p className="text-[var(--text-secondary)] text-sm">与社区成员实时交流</p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* 主体布局 */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-[calc(100vh-320px)] min-h-[500px]">
+        
+        {/* 左侧：频道和私信列表 */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="lg:col-span-1 bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border border-[var(--border-color)] overflow-hidden flex flex-col shadow-sm"
+        >
+          <div className="p-4 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]/50">
+            <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-2">
+              <Hash size={14} className="text-[var(--accent-color)]" />
+              频道
+            </h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
             {/* 公共频道 */}
-            <button
+            <motion.button
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setActiveSession({ type: 'global', id: 'global', name: '公共频道' })}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
                 activeSession.type === 'global' 
-                  ? 'bg-[var(--accent-color)]/10 text-[var(--accent-color)] border border-[var(--accent-color)]/30' 
+                  ? 'bg-gradient-to-r from-[var(--accent-color)] to-pink-500 text-white shadow-lg shadow-purple-500/20' 
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
               }`}
             >
-              <Hash size={16} />
-              <span className="text-sm font-medium">公共频道</span>
-            </button>
+              <div className={`p-2 rounded-xl ${activeSession.type === 'global' ? 'bg-white/20' : 'bg-[var(--bg-tertiary)]'}`}>
+                <Hash size={16} />
+              </div>
+              <span className="text-sm font-bold">公共频道</span>
+            </motion.button>
 
             {/* 私信分隔 */}
             {dmContacts.length > 0 && (
@@ -372,42 +422,49 @@ export default function ChatPage() {
                 <div className="pt-4 pb-2">
                   <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider px-3 flex items-center justify-between">
                     <span>私信</span>
-                    <span className="text-[var(--accent-color)]">{dmContacts.length}</span>
+                    <span className="px-2 py-0.5 bg-[var(--accent-color)]/10 text-[var(--accent-color)] rounded-full text-[10px]">{dmContacts.length}</span>
                   </h3>
                 </div>
                 {dmContacts.map(contact => (
-                  <button
+                  <motion.button
                     key={contact.id}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => openDm(contact)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
                       activeSession.type === 'dm' && activeSession.id === contact.id
-                        ? 'bg-[var(--accent-color)]/10 text-[var(--accent-color)] border border-[var(--accent-color)]/30'
+                        ? 'bg-gradient-to-r from-[var(--accent-color)] to-pink-500 text-white shadow-lg shadow-purple-500/20'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
                     }`}
                   >
                     <UserAvatar url={contact.avatar_url} size="sm" isOnline={onlineUsers.has(contact.id)} />
                     <span className="text-sm font-medium truncate flex-1 text-left">{contact.username}</span>
                     {unreadCounts[contact.id] > 0 && (
-                      <span className="px-1.5 py-0.5 bg-[var(--accent-color)] text-white text-[10px] rounded-full min-w-[18px] text-center font-bold">
+                      <span className="px-2 py-0.5 bg-pink-500 text-white text-[10px] rounded-full min-w-[20px] text-center font-bold shadow-sm">
                         {unreadCounts[contact.id]}
                       </span>
                     )}
-                  </button>
+                  </motion.button>
                 ))}
               </>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* 中间：聊天区域 */}
-        <div className="lg:col-span-2 bg-[var(--bg-card)] backdrop-blur-xl rounded-2xl border border-[var(--border-color)] overflow-hidden flex flex-col">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="lg:col-span-2 bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border border-[var(--border-color)] overflow-hidden flex flex-col shadow-sm"
+        >
           {/* 聊天头部 */}
-          <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between">
+          <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-secondary)]/30">
             <div className="flex items-center gap-3">
               {activeSession.type === 'global' ? (
                 <>
-                  <div className="p-2 bg-[var(--accent-color)]/10 rounded-lg">
-                    <Hash size={18} className="text-[var(--accent-color)]" />
+                  <div className="p-2.5 bg-gradient-to-br from-[var(--accent-color)] to-pink-500 rounded-xl text-white shadow-md">
+                    <Hash size={18} />
                   </div>
                   <div>
                     <h2 className="font-bold text-[var(--text-primary)]">公共频道</h2>
@@ -416,14 +473,17 @@ export default function ChatPage() {
                 </>
               ) : (
                 <>
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                    <Shield size={18} className="text-purple-600 dark:text-purple-400" />
+                  <div className="p-2.5 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl text-white shadow-md">
+                    <Shield size={18} />
                   </div>
                   <div>
                     <h2 className="font-bold text-[var(--text-primary)] flex items-center gap-2">
                       {activeSession.user?.username}
                       {onlineUsers.has(activeSession.id) && (
-                        <span className="text-[10px] text-green-500 font-normal">在线</span>
+                        <span className="text-[10px] text-green-500 font-normal flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                          在线
+                        </span>
                       )}
                     </h2>
                     <p className="text-[10px] text-[var(--text-muted)]">私密对话</p>
@@ -434,11 +494,14 @@ export default function ChatPage() {
           </div>
 
           {/* 消息列表 */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)]">
-                <MessageSquare size={48} className="mb-4 opacity-30" />
-                <p className="text-sm">暂无消息，发送第一条吧~</p>
+                <div className="p-6 bg-[var(--bg-secondary)] rounded-3xl mb-4">
+                  <MessageSquare size={48} className="opacity-30" />
+                </div>
+                <p className="text-sm font-medium">暂无消息</p>
+                <p className="text-xs mt-1 opacity-60">发送第一条消息开始聊天~</p>
               </div>
             ) : (
               renderMessages()
@@ -449,7 +512,7 @@ export default function ChatPage() {
               <motion.div 
                 initial={{ opacity: 0, y: 10 }} 
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 text-[var(--text-muted)] text-xs"
+                className="flex items-center gap-2 text-[var(--text-muted)] text-xs bg-[var(--bg-secondary)] px-4 py-2 rounded-full w-fit"
               >
                 <div className="flex gap-1">
                   <span className="w-1.5 h-1.5 bg-[var(--accent-color)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -462,8 +525,8 @@ export default function ChatPage() {
           </div>
 
           {/* 输入框 */}
-          <div className="p-4 border-t border-[var(--border-color)]">
-            <div className="flex items-center gap-3 bg-[var(--bg-secondary)] rounded-xl px-4 py-2 border border-[var(--border-color)] focus-within:border-[var(--accent-color)] transition-colors">
+          <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]/30">
+            <div className="flex items-center gap-3 bg-[var(--bg-card)] rounded-2xl px-4 py-3 border border-[var(--border-color)] focus-within:border-[var(--accent-color)] focus-within:shadow-lg focus-within:shadow-purple-500/10 transition-all">
               <input
                 type="text"
                 value={newMessage}
@@ -473,66 +536,79 @@ export default function ChatPage() {
                 disabled={!user}
                 className="flex-1 bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSend}
                 disabled={!newMessage.trim() || !user}
-                className="p-2 bg-[var(--accent-color)] text-white rounded-lg hover:opacity-90 disabled:opacity-30 transition-all"
+                className="p-2.5 bg-gradient-to-r from-[var(--accent-color)] to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 disabled:opacity-30 disabled:shadow-none transition-all"
               >
                 <Send size={16} />
-              </button>
+              </motion.button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* 右侧：好友列表 */}
-        <div className="lg:col-span-1 bg-[var(--bg-card)] backdrop-blur-xl rounded-2xl border border-[var(--border-color)] overflow-hidden flex flex-col">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="lg:col-span-1 bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border border-[var(--border-color)] overflow-hidden flex flex-col shadow-sm"
+        >
           {/* Tab 切换 */}
           <div className="flex border-b border-[var(--border-color)]">
             <button
               onClick={() => setSocialTab('friends')}
-              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
+              className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider transition-all ${
                 socialTab === 'friends' 
-                  ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)]' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                  ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] bg-[var(--accent-color)]/5' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/50'
               }`}
             >
-              <Users size={14} className="inline mr-1" /> 好友
+              <Users size={14} className="inline mr-1.5" /> 好友
             </button>
             <button
               onClick={() => setSocialTab('search')}
-              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
+              className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider transition-all ${
                 socialTab === 'search' 
-                  ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)]' 
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                  ? 'text-[var(--accent-color)] border-b-2 border-[var(--accent-color)] bg-[var(--accent-color)]/5' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]/50'
               }`}
             >
-              <Search size={14} className="inline mr-1" /> 搜索
+              <Search size={14} className="inline mr-1.5" /> 搜索
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 overflow-y-auto p-3 scrollbar-thin">
             {socialTab === 'friends' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] uppercase tracking-wider px-2 mb-3">
                   <span>好友列表</span>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                     {Array.from(onlineUsers).filter(id => friends.some(f => f.id === id)).length} 在线
                   </span>
                 </div>
                 
                 {friends.length === 0 ? (
-                  <div className="text-center py-10 text-[var(--text-muted)] text-xs">
-                    <Users size={32} className="mx-auto mb-3 opacity-30" />
-                    <p>暂无好友</p>
-                    <p className="mt-1 text-[10px]">去搜索添加吧~</p>
+                  <div className="text-center py-10 text-[var(--text-muted)]">
+                    <div className="p-4 bg-[var(--bg-secondary)] rounded-2xl inline-block mb-3">
+                      <Users size={32} className="opacity-30" />
+                    </div>
+                    <p className="text-xs font-medium">暂无好友</p>
+                    <p className="mt-1 text-[10px] opacity-60">去搜索添加吧~</p>
                   </div>
                 ) : (
-                  friends.map(friend => (
-                    <button
+                  friends.map((friend, index) => (
+                    <motion.button
                       key={friend.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ x: 4 }}
                       onClick={() => openDm(friend)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--bg-secondary)] transition-colors group"
+                      className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-[var(--bg-secondary)] transition-all group border border-transparent hover:border-[var(--border-color)]"
                     >
                       <UserAvatar url={friend.avatar_url} size="sm" isOnline={onlineUsers.has(friend.id)} />
                       <div className="flex-1 min-w-0 text-left">
@@ -540,11 +616,13 @@ export default function ChatPage() {
                           {friend.username}
                         </div>
                         <div className="text-[10px] text-[var(--text-muted)]">
-                          {onlineUsers.has(friend.id) ? '在线' : '离线'}
+                          {onlineUsers.has(friend.id) ? (
+                            <span className="text-green-500">在线</span>
+                          ) : '离线'}
                         </div>
                       </div>
                       <MessageSquare size={14} className="text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
+                    </motion.button>
                   ))
                 )}
               </div>
@@ -553,35 +631,44 @@ export default function ChatPage() {
             {socialTab === 'search' && (
               <div className="space-y-4">
                 <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                   <input
                     type="text"
                     placeholder="搜索用户..."
                     value={searchQuery}
                     onChange={(e) => handleSearchUsers(e.target.value)}
-                    className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-2.5 pl-9 pr-4 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--accent-color)] transition-colors"
+                    className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl py-3 pl-10 pr-4 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--accent-color)] focus:shadow-lg focus:shadow-purple-500/10 transition-all"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  {searchResults.map(profile => (
-                    <div key={profile.id} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-color)]">
+                  {searchResults.map((profile, index) => (
+                    <motion.div 
+                      key={profile.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center gap-3 p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-color)] hover:border-[var(--accent-color)]/30 transition-all"
+                    >
                       <UserAvatar url={profile.avatar_url} size="sm" isOnline={onlineUsers.has(profile.id)} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-[var(--text-primary)] truncate">{profile.username}</div>
-                        <div className="text-[10px] text-[var(--text-muted)] truncate">{profile.id.slice(0, 8)}...</div>
+                        <div className="text-[10px] text-[var(--text-muted)] truncate font-mono">{profile.id.slice(0, 8)}...</div>
                       </div>
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => addFriend(profile.id)}
-                        className="p-2 bg-[var(--accent-color)]/10 text-[var(--accent-color)] rounded-lg hover:bg-[var(--accent-color)] hover:text-white transition-colors"
+                        className="p-2.5 bg-[var(--accent-color)]/10 text-[var(--accent-color)] rounded-xl hover:bg-[var(--accent-color)] hover:text-white transition-all"
                         title="添加好友"
                       >
                         <UserPlus size={14} />
-                      </button>
-                    </div>
+                      </motion.button>
+                    </motion.div>
                   ))}
                   {searchQuery && searchResults.length === 0 && (
                     <div className="text-center text-[var(--text-muted)] text-xs py-8">
+                      <Search size={24} className="mx-auto mb-2 opacity-30" />
                       未找到用户
                     </div>
                   )}
@@ -589,7 +676,7 @@ export default function ChatPage() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
     </PageLayout>
   );
