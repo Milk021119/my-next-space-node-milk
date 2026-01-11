@@ -110,15 +110,17 @@ export default function ArchivePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: yearIndex * 0.1 }}
               >
-                <div className="bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border border-[var(--border-color)] overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
-                  {/* 年份头部 */}
-                  <div className="p-6 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-b border-[var(--border-color)]">
-                    <h2 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-3">
-                      <div className="p-2 bg-blue-500 rounded-xl text-white">
+                <div className="bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border border-[var(--border-color)] overflow-hidden shadow-sm hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300">
+                  {/* 年份头部 - 增强 */}
+                  <div className="p-6 bg-gradient-to-r from-blue-50 via-cyan-50 to-blue-50 dark:from-blue-900/20 dark:via-cyan-900/20 dark:to-blue-900/20 border-b border-[var(--border-color)] relative overflow-hidden">
+                    {/* 装饰 */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                    <h2 className="text-2xl font-black text-[var(--text-primary)] flex items-center gap-3 relative">
+                      <div className="p-2.5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl text-white shadow-lg shadow-blue-500/25">
                         <Calendar size={20} />
                       </div>
                       {yearGroup.year} 年
-                      <span className="ml-auto text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                      <span className="ml-auto text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-4 py-1.5 rounded-full shadow-sm">
                         {yearGroup.months.reduce((acc, m) => acc + m.posts.length, 0)} 篇
                       </span>
                     </h2>
@@ -150,11 +152,11 @@ export default function ArchivePage() {
                             >
                               <Link
                                 href={`/post/${post.id}`}
-                                className="block p-4 rounded-2xl hover:bg-[var(--bg-secondary)] transition-all group border border-transparent hover:border-[var(--border-color)]"
+                                className="block p-4 rounded-2xl hover:bg-[var(--bg-secondary)] transition-all group/item border border-transparent hover:border-[var(--border-color)] hover:shadow-md cursor-pointer"
                               >
                                 <div className="flex items-center justify-between gap-4">
                                   <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-[var(--text-primary)] truncate group-hover:text-[var(--accent-color)] transition-colors">
+                                    <h4 className="font-bold text-[var(--text-primary)] truncate group-hover/item:text-[var(--accent-color)] transition-colors">
                                       {post.title || '无标题'}
                                     </h4>
                                     <p className="text-xs text-[var(--text-muted)] mt-1 flex items-center gap-2">
@@ -162,7 +164,7 @@ export default function ArchivePage() {
                                       {new Date(post.created_at).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
                                     </p>
                                   </div>
-                                  <ChevronRight size={16} className="text-[var(--text-muted)] group-hover:text-[var(--accent-color)] group-hover:translate-x-1 transition-all" />
+                                  <ChevronRight size={16} className="text-[var(--text-muted)] group-hover/item:text-[var(--accent-color)] group-hover/item:translate-x-2 transition-all" />
                                 </div>
                               </Link>
                             </motion.div>
@@ -221,10 +223,10 @@ export default function ArchivePage() {
                   >
                     <Link
                       href={`/tags/${encodeURIComponent(tag)}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[var(--bg-secondary)] hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 text-[var(--text-secondary)] hover:text-white rounded-xl text-xs font-bold transition-all hover:shadow-lg hover:shadow-purple-500/20 border border-[var(--border-color)] hover:border-transparent"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-[var(--bg-secondary)] hover:bg-gradient-to-r hover:from-purple-500 hover:to-pink-500 text-[var(--text-secondary)] hover:text-white rounded-xl text-xs font-bold transition-all hover:shadow-lg hover:shadow-purple-500/25 border border-[var(--border-color)] hover:border-transparent cursor-pointer hover:-translate-y-1"
                     >
                       {tag}
-                      <span className="text-[10px] opacity-60">({count})</span>
+                      <span className="text-[10px] opacity-60 bg-black/10 px-1.5 py-0.5 rounded-md">({count})</span>
                     </Link>
                   </motion.div>
                 ))}

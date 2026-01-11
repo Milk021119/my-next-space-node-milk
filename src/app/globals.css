@@ -1425,6 +1425,468 @@ body {
 }
 
 /* ========================================
+   页面布局增强 - UI/UX Pro Max
+   ======================================== */
+
+/* 页面容器 */
+.page-container {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+/* 内容区域 */
+.content-area {
+  padding: 1.5rem;
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .content-area {
+    padding: 2.5rem;
+  }
+}
+
+/* ========================================
+   增强悬停效果 - UI/UX Pro Max
+   ======================================== */
+
+/* 卡片悬停发光效果 */
+.card-hover-glow {
+  transition: all var(--animation-normal) var(--animation-easing);
+}
+
+.card-hover-glow:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px var(--shadow-color), var(--shadow-glow-purple);
+  border-color: var(--accent-color);
+}
+
+/* 图片悬停缩放 */
+.img-hover-zoom {
+  overflow: hidden;
+}
+
+.img-hover-zoom img {
+  transition: transform var(--animation-slow) var(--animation-easing);
+}
+
+.img-hover-zoom:hover img {
+  transform: scale(1.08);
+}
+
+/* 链接悬停下划线 */
+.link-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent-gradient);
+  transition: width var(--animation-normal) var(--animation-easing);
+}
+
+.link-underline:hover::after {
+  width: 100%;
+}
+
+/* ========================================
+   文章卡片增强 - UI/UX Pro Max
+   ======================================== */
+
+.article-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  transition: all var(--animation-normal) var(--animation-easing);
+  cursor: pointer;
+}
+
+.article-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px -12px var(--shadow-color), var(--shadow-glow-purple);
+  border-color: rgba(147, 51, 234, 0.3);
+}
+
+.article-card .cover {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  position: relative;
+}
+
+.article-card .cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--animation-slower) var(--animation-easing);
+}
+
+.article-card:hover .cover img {
+  transform: scale(1.1);
+}
+
+.article-card .cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--animation-normal) var(--animation-easing);
+}
+
+.article-card:hover .cover::after {
+  opacity: 1;
+}
+
+/* ========================================
+   动态卡片增强 - UI/UX Pro Max
+   ======================================== */
+
+.moment-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 1.5rem;
+  transition: all var(--animation-normal) var(--animation-easing);
+}
+
+.moment-card:hover {
+  box-shadow: 0 20px 40px var(--shadow-color);
+  border-color: rgba(147, 51, 234, 0.2);
+}
+
+/* ========================================
+   统计卡片增强 - UI/UX Pro Max
+   ======================================== */
+
+.stat-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  text-align: center;
+  transition: all var(--animation-normal) var(--animation-easing);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-gradient);
+  opacity: 0;
+  transition: opacity var(--animation-normal) var(--animation-easing);
+}
+
+.stat-card:hover::before {
+  opacity: 0.05;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px var(--shadow-color);
+}
+
+.stat-card .stat-value {
+  font-size: 2.5rem;
+  font-weight: 900;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* ========================================
+   Banner 增强 - UI/UX Pro Max
+   ======================================== */
+
+.page-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 2rem 2rem;
+  margin: -1.5rem -1.5rem 2rem -1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .page-banner {
+    margin: -2.5rem -2.5rem 2.5rem -2.5rem;
+    border-radius: 0 0 2.5rem 2.5rem;
+  }
+}
+
+.page-banner .banner-bg {
+  position: absolute;
+  inset: 0;
+}
+
+.page-banner .banner-content {
+  position: relative;
+  z-index: 10;
+  padding: 3rem 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .page-banner .banner-content {
+    padding: 4rem 2.5rem;
+  }
+}
+
+/* ========================================
+   表单增强 - UI/UX Pro Max
+   ======================================== */
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.375rem;
+}
+
+.form-error {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ========================================
+   模态框增强 - UI/UX Pro Max
+   ======================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 2rem;
+  max-width: 28rem;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* ========================================
+   Toast 通知增强 - UI/UX Pro Max
+   ======================================== */
+
+.toast {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 20px 40px var(--shadow-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 24rem;
+}
+
+.toast-success {
+  border-left: 4px solid #22c55e;
+}
+
+.toast-error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.toast-info {
+  border-left: 4px solid #3b82f6;
+}
+
+/* ========================================
+   空状态增强 - UI/UX Pro Max
+   ======================================== */
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-state .empty-icon {
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.empty-state .empty-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.empty-state .empty-description {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 20rem;
+  margin: 0 auto;
+}
+
+/* ========================================
+   加载状态增强 - UI/UX Pro Max
+   ======================================== */
+
+.loading-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--bg-tertiary);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin-slow 1s linear infinite;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.loading-dots span {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--accent-color);
+  border-radius: 50%;
+  animation: bounce-soft 1.4s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: 0s; }
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ========================================
+   响应式工具类 - UI/UX Pro Max
+   ======================================== */
+
+/* 隐藏/显示 */
+.hide-mobile {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .hide-mobile {
+    display: block;
+  }
+  .hide-desktop {
+    display: none;
+  }
+}
+
+/* 间距响应式 */
+.space-responsive {
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .space-responsive {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .space-responsive {
+    padding: 2rem;
+  }
+}
+
+/* ========================================
+   打印样式 - UI/UX Pro Max
+   ======================================== */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .card, .glass-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    box-shadow: none;
+  }
+} rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+/* ========================================
    图片和媒体增强 - UI/UX Pro Max
    ======================================== */
 

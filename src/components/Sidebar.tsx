@@ -97,25 +97,30 @@ export default function Sidebar() {
       >
         <div className="h-full flex flex-col px-5 py-6">
           
-          {/* Logo 区域 */}
+          {/* Logo 区域 - 增强版 */}
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex-shrink-0 mb-8 flex items-center gap-3 px-2"
           >
-            <div className="w-11 h-11 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30 rotate-3 hover:rotate-0 transition-transform">
-              <span className="font-black text-lg">S</span>
-            </div>
+            <motion.div 
+              whileHover={{ rotate: 0, scale: 1.05 }}
+              className="relative w-12 h-12 bg-gradient-to-br from-purple-600 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30 rotate-3 transition-all cursor-pointer"
+            >
+              <span className="font-black text-xl">S</span>
+              {/* 发光效果 */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 blur-lg opacity-50 -z-10" />
+            </motion.div>
             <div>
-              <h1 className="font-black text-xl tracking-tight text-[var(--text-primary)]">SOYMILK</h1>
+              <h1 className="font-black text-xl tracking-tight text-[var(--text-primary)] bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">SOYMILK</h1>
               <p className="text-[10px] font-bold text-[var(--text-muted)] tracking-[0.15em] uppercase flex items-center gap-1">
-                <Sparkles size={10} className="text-purple-500" />
+                <Sparkles size={10} className="text-purple-500 animate-pulse" />
                 个人数字空间
               </p>
             </div>
           </motion.div>
 
-          {/* 导航菜单 */}
+          {/* 导航菜单 - 增强版 */}
           <nav className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-2 scrollbar-thin scrollbar-thumb-[var(--border-color)]">
             {navItems.map((item, index) => {
               const isActive = pathname === item.path || (item.path !== '/' && pathname?.startsWith(item.path));
@@ -130,22 +135,27 @@ export default function Sidebar() {
                 >
                   <Link href={item.path} onClick={() => setIsOpen(false)} className="block w-full">
                     <motion.div 
-                      whileHover={{ x: 4 }}
+                      whileHover={{ x: 6 }}
                       whileTap={{ scale: 0.98 }}
-                      className={`relative flex items-center gap-4 p-4 rounded-2xl text-sm font-bold transition-all duration-300 group overflow-hidden
+                      className={`relative flex items-center gap-4 p-4 rounded-2xl text-sm font-bold transition-all duration-300 group overflow-hidden cursor-pointer
                         ${isActive 
                           ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25' 
                           : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
                         }`}
                     >
-                      <div className={`p-2 rounded-xl transition-colors ${isActive ? 'bg-white/20' : 'bg-[var(--bg-tertiary)] group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30'}`}>
-                        <Icon size={18} className={isActive ? "text-white" : "text-[var(--text-muted)] group-hover:text-purple-600 dark:group-hover:text-purple-400"} />
+                      {/* 悬停背景光效 */}
+                      {!isActive && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/5 to-pink-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      )}
+                      
+                      <div className={`relative p-2 rounded-xl transition-all duration-300 ${isActive ? 'bg-white/20' : 'bg-[var(--bg-tertiary)] group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 group-hover:shadow-md'}`}>
+                        <Icon size={18} className={`transition-colors duration-300 ${isActive ? "text-white" : "text-[var(--text-muted)] group-hover:text-purple-600 dark:group-hover:text-purple-400"}`} />
                       </div>
-                      <span>{item.name}</span>
+                      <span className="relative">{item.name}</span>
                       {isActive && (
                         <motion.div 
                           layoutId="nav-indicator"
-                          className="absolute right-3 w-1.5 h-1.5 bg-white rounded-full"
+                          className="absolute right-3 w-2 h-2 bg-white rounded-full shadow-lg shadow-white/50"
                         />
                       )}
                     </motion.div>

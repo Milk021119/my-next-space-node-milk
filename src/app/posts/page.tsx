@@ -154,9 +154,12 @@ export default function BlogPage() {
               whileInView={{ opacity: 1, y: 0 }} 
               viewport={{ once: true, margin: "-50px" }}
               transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -8 }} 
-              className="relative group flex flex-col h-full bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-2xl hover:shadow-purple-500/10 hover:border-purple-200 dark:hover:border-purple-800 transition-all duration-500 overflow-hidden"
+              whileHover={{ y: -10 }} 
+              className="relative group flex flex-col h-full bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border border-[var(--border-color)] shadow-sm hover:shadow-2xl hover:shadow-purple-500/15 hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-500 overflow-hidden cursor-pointer"
             >
+              {/* 悬停发光效果 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-purple-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:via-transparent group-hover:to-pink-500/5 transition-all duration-500 rounded-3xl" />
+              
               {/* 全局链接：铺满整个卡片 */}
               <Link 
                 href={`/post/${post.id}`} 
@@ -164,15 +167,22 @@ export default function BlogPage() {
                 aria-label={`阅读 ${post.title}`}
               />
 
-              {/* 封面区 */}
+              {/* 封面区 - 增强版 */}
               <div className="aspect-video w-full overflow-hidden relative bg-[var(--bg-tertiary)]">
                   <ParallaxImage src={post.cover_url || getAnimeCover(post.id)} />
-                  {/* 渐变遮罩 */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  {/* 编号标签 */}
-                  <div className="absolute top-4 right-4 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-3 py-1.5 rounded-xl text-[10px] font-black text-slate-700 dark:text-slate-200 shadow-lg pointer-events-none z-10 flex items-center gap-1.5">
-                      <TrendingUp size={10} className="text-purple-500" />
-                      #{post.id}
+                  {/* 渐变遮罩 - 增强 */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  {/* 编号标签 - 增强 */}
+                  <div className="absolute top-4 right-4 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md px-3.5 py-2 rounded-xl text-[10px] font-black text-slate-700 dark:text-slate-200 shadow-lg pointer-events-none z-10 flex items-center gap-2 border border-white/20">
+                      <TrendingUp size={12} className="text-purple-500" />
+                      <span>#{post.id}</span>
+                  </div>
+                  {/* 悬停阅读提示 */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <div className="px-5 py-2.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-full text-sm font-bold text-slate-900 dark:text-white shadow-xl flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                      <BookOpen size={16} className="text-purple-500" />
+                      阅读文章
+                    </div>
                   </div>
               </div>
 
