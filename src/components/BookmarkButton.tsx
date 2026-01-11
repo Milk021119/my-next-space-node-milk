@@ -138,18 +138,46 @@ export default function BookmarkButton({
           )}
         </AnimatePresence>
 
-        {/* 收藏成功动画效果 */}
+        {/* 收藏成功动画效果 - 星星闪烁 */}
         <AnimatePresence>
           {bookmarked && !loading && (
-            <motion.div
-              initial={{ scale: 1.5, opacity: 0.8 }}
-              animate={{ scale: 2, opacity: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            >
-              <Bookmark size={iconSize} fill="currentColor" className="text-amber-400" />
-            </motion.div>
+            <>
+              {/* 扩散光环 */}
+              <motion.div
+                initial={{ scale: 1, opacity: 0.8 }}
+                animate={{ scale: 2.5, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              >
+                <div className="w-full h-full rounded-full bg-amber-400/30" />
+              </motion.div>
+              
+              {/* 闪烁星星 */}
+              {[...Array(4)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ scale: 0, opacity: 1, x: 0, y: 0 }}
+                  animate={{ 
+                    scale: [0, 1, 0],
+                    opacity: [1, 1, 0],
+                    x: [0, (i % 2 === 0 ? 1 : -1) * (10 + i * 5)],
+                    y: [0, (i < 2 ? -1 : 1) * (10 + i * 3)]
+                  }}
+                  transition={{ duration: 0.6, delay: i * 0.05 }}
+                  className="absolute pointer-events-none"
+                  style={{ 
+                    left: '50%', 
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                  </svg>
+                </motion.div>
+              ))}
+            </>
           )}
         </AnimatePresence>
       </motion.button>

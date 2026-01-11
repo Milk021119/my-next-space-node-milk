@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import { 
   FileText, Send, Eye, Edit3, Tag, Image, Link2, Upload, X, 
   Loader2, Bold, Italic, List, Quote, Code, Heading2, 
-  ImagePlus, Trash2, CheckCircle, AlertCircle
+  ImagePlus, Trash2, CheckCircle, AlertCircle, Sparkles
 } from 'lucide-react';
 
 // Markdown 工具栏按钮
@@ -315,14 +315,16 @@ export default function WritePage() {
             {activeTab === 'edit' && (
               <div className="flex items-center gap-1 px-4 py-3 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]/30 overflow-x-auto">
                 {toolbarButtons.map((btn) => (
-                  <button
+                  <motion.button
                     key={btn.label}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => insertMarkdown(btn.prefix, btn.suffix, btn.placeholder)}
                     title={btn.label}
-                    className="p-2 rounded-lg text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors flex-shrink-0"
+                    className="p-2.5 rounded-xl text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors flex-shrink-0"
                   >
                     <btn.icon size={18} />
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             )}
@@ -522,7 +524,7 @@ export default function WritePage() {
             <button
               onClick={handlePublish}
               disabled={isPublishing || isUploading || !title.trim() || !content.trim()}
-              className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30"
+              className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-purple-400 disabled:to-pink-400 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-[0.98]"
             >
               {isPublishing || isUploading ? (
                 <>
@@ -531,7 +533,7 @@ export default function WritePage() {
                 </>
               ) : (
                 <>
-                  <Send size={16} />
+                  <Sparkles size={16} />
                   发布文章
                 </>
               )}

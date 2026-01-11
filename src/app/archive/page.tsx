@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Tag, ChevronRight, Archive, Clock, Sparkles } from 'lucide-react';
 import { ContentLoading } from '@/components/LoadingSpinner';
 import PageLayout, { PageCard, PageFooter } from '@/components/PageLayout';
+import { PageBanner } from '@/components/ui';
 import type { Post } from '@/types';
 
 interface ArchiveGroup {
@@ -86,59 +87,14 @@ export default function ArchivePage() {
 
   return (
     <PageLayout maxWidth="5xl" className="pt-0">
-      {/* 美化页面头部 Banner */}
-      <div className="relative -mx-6 lg:-mx-10 -mt-12 mb-10">
-        <div className="h-56 lg:h-64 bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-600 overflow-hidden">
-          {/* 装饰图案 */}
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px]" />
-            <div className="absolute top-10 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-10 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
-          </div>
-          
-          {/* 浮动装饰 */}
-          <motion.div 
-            animate={{ y: [0, -15, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-16 right-[15%] text-white/20"
-          >
-            <Archive size={48} />
-          </motion.div>
-          <motion.div 
-            animate={{ y: [0, 12, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute bottom-20 left-[10%] text-white/15"
-          >
-            <Clock size={36} />
-          </motion.div>
-        </div>
-        
-        {/* 底部渐变 */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
-        
-        {/* 内容 */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
-          <div className="max-w-5xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-end gap-4"
-            >
-              <div className="p-4 bg-white/90 dark:bg-slate-800/90 rounded-2xl shadow-xl">
-                <Archive size={32} className="text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-black text-[var(--text-primary)] mb-1">
-                  文章归档
-                </h1>
-                <p className="text-[var(--text-secondary)]">
-                  时间线上的所有文章记录
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </div>
+      {/* 页面头部 Banner */}
+      <PageBanner
+        title="文章归档"
+        subtitle="时间线上的所有文章记录"
+        icon={Archive}
+        gradient="blue"
+        decorationIcons={[Archive, Clock]}
+      />
 
       {loading ? (
         <ContentLoading text="加载归档中..." />

@@ -5,9 +5,10 @@ import { supabase } from '@/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import { zhCN } from 'date-fns/locale'; 
-import { Heart, MessageSquare, Send, Image as ImageIcon, X, Loader2, Trash2, User, Sparkles, Clock, Calendar } from 'lucide-react';
+import { Heart, MessageSquare, Send, Image as ImageIcon, X, Loader2, Trash2, User, Sparkles, Clock, Calendar, MessageCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import PageLayout from '@/components/PageLayout';
+import { PageBanner, MomentCardSkeleton } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { validateImageFile } from '@/lib/constants';
 import { checkLikedBatch, likePost } from '@/lib/likesDb';
@@ -574,85 +575,35 @@ const PublishBox = ({ user, onPublish }: { user: any, onPublish: () => void }) =
 };
 
 
-// --- 组件: 页面头部 Banner (美化版) ---
+// --- 组件: 页面头部 Banner (使用 PageBanner) ---
 const LogsBanner = ({ user, momentCount }: { user: any, momentCount: number }) => (
-  <div className="relative -mx-6 lg:-mx-10 -mt-12 mb-10">
-    {/* 背景 */}
-    <div className="h-72 lg:h-80 bg-gradient-to-br from-purple-600 via-indigo-600 to-cyan-500 overflow-hidden">
-      {/* 装饰图案 */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px]" />
-        <div className="absolute top-10 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-10 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl" />
-      </div>
-      
-      {/* 浮动装饰 */}
+  <PageBanner
+    title="我的动态"
+    subtitle="记录生活的点滴时光"
+    icon={MessageCircle}
+    gradient="cyan"
+    height="lg"
+    decorationIcons={[Sparkles, Calendar]}
+    stats={[{ label: '条动态', value: momentCount }]}
+  >
+    {/* 用户头像 - 通过 children 插槽添加 */}
+    {user && (
       <motion.div 
-        animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-20 right-[20%] text-white/20"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+        className="hidden lg:block"
       >
-        <Sparkles size={40} />
-      </motion.div>
-      <motion.div 
-        animate={{ y: [0, 15, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        className="absolute bottom-32 left-[15%] text-white/15"
-      >
-        <Calendar size={32} />
-      </motion.div>
-    </div>
-    
-    {/* 底部渐变 */}
-    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
-    
-    {/* 内容 */}
-    <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
-      <div className="max-w-4xl mx-auto flex items-end gap-6">
-        {/* 头像 */}
-        <motion.div 
-          initial={{ scale: 0.8, rotate: -10 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 200 }}
-          className="relative"
-        >
-          <div className="w-24 h-24 lg:w-28 lg:h-28 rounded-3xl bg-gradient-to-br from-white/90 to-white/70 p-1 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
-            <img 
-              src={user?.user_metadata?.avatar_url || '/default-avatar.png'} 
-              alt="avatar" 
-              className="w-full h-full object-cover rounded-[20px] bg-[var(--bg-secondary)]" 
-            />
-          </div>
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-[var(--bg-primary)] flex items-center justify-center">
-            <span className="text-white text-xs">✓</span>
-          </div>
-        </motion.div>
-        
-        {/* 标题 */}
-        <div className="mb-2">
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl lg:text-4xl font-black text-[var(--text-primary)] mb-2"
-          >
-            我的动态
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-[var(--text-secondary)] flex items-center gap-3"
-          >
-            <span>记录生活的点滴时光</span>
-            <span className="px-3 py-1 bg-[var(--bg-card)] rounded-full text-xs font-bold text-[var(--accent-color)]">
-              {momentCount} 条动态
-            </span>
-          </motion.p>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-white/90 to-white/70 p-0.5 shadow-xl">
+          <img 
+            src={user?.user_metadata?.avatar_url || '/default-avatar.png'} 
+            alt="avatar" 
+            className="w-full h-full object-cover rounded-[14px] bg-[var(--bg-secondary)]" 
+          />
         </div>
-      </div>
-    </div>
-  </div>
+      </motion.div>
+    )}
+  </PageBanner>
 );
 
 // --- 主页面 ---

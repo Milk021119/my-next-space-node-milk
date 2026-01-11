@@ -18,6 +18,7 @@ import ShareButton from '@/components/ShareButton';
 import TableOfContents from '@/components/TableOfContents';
 import RelatedPosts from '@/components/RelatedPosts';
 import Breadcrumb from '@/components/Breadcrumb';
+import ReadingProgress from '@/components/ReadingProgress';
 import { ArticleJsonLd } from '@/components/JsonLd';
 import { calculateReadingTime, formatWordCount } from '@/lib/readingTime';
 import { incrementViewCount } from '@/lib/views';
@@ -88,6 +89,7 @@ export default function PostDetail() {
     <div className="min-h-screen bg-[var(--bg-primary)] font-sans selection:bg-purple-200 dark:selection:bg-purple-800 pb-20">
       <Sidebar />
       <TableOfContents content={post.content} />
+      <ReadingProgress />
       
       {/* JSON-LD 结构化数据 */}
       <ArticleJsonLd

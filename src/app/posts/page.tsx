@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import LoginModal from '@/components/LoginModal'; 
-import PostSkeleton from '@/components/PostSkeleton'; 
 import ParallaxImage from '@/components/ParallaxImage'; 
 import Link from 'next/link'; 
 import { format } from 'date-fns';
@@ -16,6 +15,7 @@ import BookmarkButton from '@/components/BookmarkButton';
 import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/context/ToastContext';
 import PageLayout, { PageFooter } from '@/components/PageLayout';
+import { PageBanner, ArticleCardSkeleton } from '@/components/ui';
 import type { Post } from '@/types';
 
 export default function BlogPage() {
@@ -114,62 +114,15 @@ export default function BlogPage() {
     <PageLayout maxWidth="5xl" className="pt-0">
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
       
-      {/* 美化页面头部 Banner */}
-      <div className="relative -mx-6 lg:-mx-10 -mt-12 mb-10">
-        <div className="h-64 lg:h-72 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 overflow-hidden">
-          {/* 装饰图案 */}
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px]" />
-            <div className="absolute top-10 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-10 w-96 h-96 bg-pink-400/20 rounded-full blur-3xl" />
-          </div>
-          
-          {/* 浮动装饰 */}
-          <motion.div 
-            animate={{ y: [0, -15, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-16 right-[15%] text-white/20"
-          >
-            <BookOpen size={48} />
-          </motion.div>
-          <motion.div 
-            animate={{ y: [0, 12, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute bottom-24 left-[10%] text-white/15"
-          >
-            <Sparkles size={36} />
-          </motion.div>
-        </div>
-        
-        {/* 底部渐变 */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
-        
-        {/* 内容 */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
-          <div className="max-w-5xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-end gap-4"
-            >
-              <div className="p-4 bg-white/90 dark:bg-slate-800/90 rounded-2xl shadow-xl">
-                <BookOpen size={32} className="text-purple-600" />
-              </div>
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-black text-[var(--text-primary)] mb-1">
-                  文章
-                </h1>
-                <p className="text-[var(--text-secondary)] flex items-center gap-2">
-                  探索技术与创意的交汇点
-                  <span className="px-2 py-0.5 bg-[var(--bg-card)] rounded-full text-xs font-bold text-[var(--accent-color)]">
-                    {posts.length} 篇
-                  </span>
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </div>
+      {/* 页面头部 Banner */}
+      <PageBanner
+        title="文章"
+        subtitle="探索技术与创意的交汇点"
+        icon={BookOpen}
+        gradient="purple"
+        decorationIcons={[BookOpen, Sparkles]}
+        stats={[{ label: '篇', value: posts.length }]}
+      />
 
       {/* 发布入口按钮 (仅登录可见) */}
       {user && (
@@ -191,7 +144,7 @@ export default function BlogPage() {
       {/* 文章画廊 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {loading && posts.length === 0 
-          ? Array(4).fill(0).map((_, i) => <PostSkeleton key={i} />) 
+          ? Array(4).fill(0).map((_, i) => <ArticleCardSkeleton key={i} />) 
           : posts.length === 0 
           ? <div className="col-span-full"><EmptyState type="posts" /></div>
           : posts.map((post, index) => (

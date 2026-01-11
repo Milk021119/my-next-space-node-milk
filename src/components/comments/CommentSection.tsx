@@ -217,62 +217,82 @@ function CommentItem({ comment, currentUserId, onReply, onDelete, isReply = fals
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className={`${isReply ? 'ml-12 mt-4' : ''}`}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      className={`${isReply ? 'ml-12 mt-4' : ''} group`}
     >
       <div className="flex gap-3">
         <Link href={`/u/${comment.user_id}`} className="flex-shrink-0">
-          <div className="w-10 h-10 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-            {avatarUrl ? (
-              <Image
-                src={avatarUrl}
-                alt={username}
-                width={40}
-                height={40}
-                className="object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <User size={20} className="text-[var(--text-muted)]" />
-              </div>
-            )}
-          </div>
+          <motion.div 
+            whileHover={{ scale: 1.1 }}
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-0.5 shadow-md"
+          >
+            <div className="w-full h-full rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={username}
+                  width={40}
+                  height={40}
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <User size={20} className="text-[var(--text-muted)]" />
+                </div>
+              )}
+            </div>
+          </motion.div>
         </Link>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Link
-              href={`/u/${comment.user_id}`}
-              className="font-bold text-sm text-[var(--text-primary)] hover:text-purple-500 transition-colors"
-            >
-              {username}
-            </Link>
-            <span className="text-xs text-[var(--text-muted)]">
-              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: zhCN })}
-            </span>
+          {/* 气泡卡片样式 */}
+          <div className="bg-[var(--bg-secondary)] rounded-2xl rounded-tl-sm p-4 border border-[var(--border-color)] group-hover:border-purple-200 dark:group-hover:border-purple-800/50 transition-colors">
+            <div className="flex items-center gap-2 mb-2">
+              <Link
+                href={`/u/${comment.user_id}`}
+                className="font-bold text-sm text-[var(--text-primary)] hover:text-purple-500 transition-colors"
+              >
+                {username}
+              </Link>
+              {isOwner && (
+                <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[10px] font-bold rounded-full">
+                  作者
+                </span>
+              )}
+              <span className="text-xs text-[var(--text-muted)]">
+                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: zhCN })}
+              </span>
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap break-words leading-relaxed">
+              {comment.content}
+            </p>
           </div>
-          <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap break-words">
-            {comment.content}
-          </p>
-          <div className="flex items-center gap-4 mt-2">
+          
+          {/* 操作按钮 */}
+          <div className="flex items-center gap-4 mt-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
             {!isReply && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onReply(comment.id, username)}
                 className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-purple-500 transition-colors"
               >
                 <Reply size={14} />
                 回复
-              </button>
+              </motion.button>
             )}
             {isOwner && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onDelete(comment.id)}
                 className="flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-red-500 transition-colors"
               >
                 <Trash2 size={14} />
                 删除
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
@@ -280,7 +300,7 @@ function CommentItem({ comment, currentUserId, onReply, onDelete, isReply = fals
 
       {/* 回复列表 */}
       {comment.replies && comment.replies.length > 0 && (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 space-y-4 pl-4 border-l-2 border-[var(--border-color)]">
           {comment.replies.map((reply) => (
             <CommentItem
               key={reply.id}
