@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { getUserBookmarks, type Post } from '@/lib/bookmarks';
 import Sidebar from '@/components/Sidebar';
+import AnimatedBackground from '@/components/AnimatedBackground';
 import BookmarkButton from '@/components/BookmarkButton';
 import ParallaxImage from '@/components/ParallaxImage';
 import Link from 'next/link';
@@ -89,8 +90,9 @@ export default function BookmarksPage() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] font-sans flex">
       <Sidebar />
+      <AnimatedBackground />
       
-      <main className="flex-1 lg:ml-72 2xl:ml-80 transition-all duration-300 min-h-screen py-24">
+      <main className="flex-1 lg:ml-72 2xl:ml-80 transition-all duration-300 min-h-screen py-24 relative z-10">
         <div className="max-w-5xl mx-auto px-6 lg:px-10">
           
           {/* 页面头部 */}

@@ -6,11 +6,12 @@ import {
   Trash2, Plus, Copy, FileText, Settings, Key, 
   RefreshCw, LayoutDashboard, Terminal, ShieldAlert, LogOut, 
   Loader2, Users, MessageSquare, Search, Lock, Unlock, Eye, EyeOff, Pin, 
-  Download, Activity, Server, AlertTriangle, CheckCircle2, MoreHorizontal, Filter
+  Download, Activity, AlertTriangle, CheckCircle2, Globe, Shield
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 // --- 类型定义 ---
 type AdminTab = 'overview' | 'posts' | 'users' | 'comments' | 'invites' | 'system';
@@ -46,10 +47,19 @@ export default function AdminPage() {
 
   // 数据集
   const [stats, setStats] = useState({ posts: 0, users: 0, comments: 0, invites: 0 });
+  const [recentStats, setRecentStats] = useState({ postsToday: 0, usersThisWeek: 0, commentsToday: 0 });
   const [posts, setPosts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
   const [codes, setCodes] = useState<any[]>([]);
+  
+  // 批量选择
+  const [selectedPosts, setSelectedPosts] = useState<number[]>([]);
+  
+  // 系统设置
+  const [siteSettings, setSiteSettings] = useState({
+    autoRefresh: false,
+  });
   
   // 邀请码增强状态
   const [customCode, setCustomCode] = useState('');
@@ -94,13 +104,20 @@ export default function AdminPage() {
   // --- 📡 数据获取 ---
   async function fetchOverview() {
     setLoadingData(true);
-    const [p, u, c, i] = await Promise.all([
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = subDays(new Date(), 7).toISOString();
+    
+    const [p, u, c, i, pToday, uWeek, cToday] = await Promise.all([
         supabase.from('posts').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('comments').select('*', { count: 'exact', head: true }),
-        supabase.from('invite_codes').select('*', { count: 'exact', head: true })
+        supabase.from('invite_codes').select('*', { count: 'exact', head: true }).eq('is_used', false),
+        supabase.from('posts').select('*', { count: 'exact', head: true }).gte('created_at', today),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
+        supabase.from('comments').select('*', { count: 'exact', head: true }).gte('created_at', today),
     ]);
     setStats({ posts: p.count || 0, users: u.count || 0, comments: c.count || 0, invites: i.count || 0 });
+    setRecentStats({ postsToday: pToday.count || 0, usersThisWeek: uWeek.count || 0, commentsToday: cToday.count || 0 });
     setLoadingData(false);
     setVerifying(false);
   }
@@ -149,6 +166,30 @@ export default function AdminPage() {
     const { error } = await supabase.from('posts').delete().eq('id', id);
     if (error) showToast('删除失败', 'error'); else { showToast('文章已删除'); fetchPosts(); }
   }
+
+  // 批量删除文章
+  async function batchDeletePosts() {
+    if (selectedPosts.length === 0) return showToast('请先选择文章', 'error');
+    if (!confirm(`确定删除选中的 ${selectedPosts.length} 篇文章？`)) return;
+    
+    const { error } = await supabase.from('posts').delete().in('id', selectedPosts);
+    if (error) showToast('批量删除失败', 'error');
+    else {
+      showToast(`已删除 ${selectedPosts.length} 篇文章`);
+      setSelectedPosts([]);
+      fetchPosts();
+    }
+  }
+
+  // 自动刷新
+  useEffect(() => {
+    if (!siteSettings.autoRefresh || activeTab !== 'overview') return;
+    const interval = setInterval(() => {
+      fetchOverview();
+      showToast('数据已自动刷新');
+    }, 30000); // 30秒刷新一次
+    return () => clearInterval(interval);
+  }, [siteSettings.autoRefresh, activeTab]);
 
   // 2. 用户管理
   async function toggleBanUser(id: string, current: boolean) {
@@ -280,10 +321,18 @@ export default function AdminPage() {
                 {activeTab === 'overview' && (
                     <motion.div initial={{opacity:0, y: 20}} animate={{opacity:1, y: 0}} exit={{opacity:0, y: -20}} className="space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <StatCard label="总文章数" value={stats.posts} color="bg-blue-600" icon={FileText} trend="+2 本周" />
-                            <StatCard label="注册用户" value={stats.users} color="bg-purple-600" icon={Users} trend="+5 本周" />
-                            <StatCard label="待审评论" value={stats.comments} color="bg-pink-600" icon={MessageSquare} trend="无异常" />
-                            <StatCard label="有效邀请码" value={stats.invites} color="bg-orange-500" icon={Key} trend="充足" />
+                            <StatCard label="总文章数" value={stats.posts} color="bg-blue-600" icon={FileText} trend={`+${recentStats.postsToday} 今日`} />
+                            <StatCard label="注册用户" value={stats.users} color="bg-purple-600" icon={Users} trend={`+${recentStats.usersThisWeek} 本周`} />
+                            <StatCard label="评论总数" value={stats.comments} color="bg-pink-600" icon={MessageSquare} trend={`+${recentStats.commentsToday} 今日`} />
+                            <StatCard label="可用邀请码" value={stats.invites} color="bg-orange-500" icon={Key} trend={stats.invites > 5 ? "充足" : "偏少"} />
+                        </div>
+                        
+                        {/* 快捷操作 */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <QuickAction icon={Plus} label="新建文章" onClick={() => router.push('/write')} color="bg-blue-500" />
+                          <QuickAction icon={Key} label="生成邀请码" onClick={() => {setActiveTab('invites'); fetchCodes();}} color="bg-purple-500" />
+                          <QuickAction icon={Download} label="导出文章" onClick={() => {fetchPosts().then(() => exportData(posts, 'posts'));}} color="bg-green-500" />
+                          <QuickAction icon={RefreshCw} label={siteSettings.autoRefresh ? "关闭自动刷新" : "开启自动刷新"} onClick={() => setSiteSettings(s => ({...s, autoRefresh: !s.autoRefresh}))} color={siteSettings.autoRefresh ? "bg-orange-500" : "bg-slate-500"} />
                         </div>
                         
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -296,13 +345,19 @@ export default function AdminPage() {
                             </div>
                             
                             <div className="bg-gradient-to-br from-[#0f172a] to-[#1e293b] p-8 rounded-3xl text-white shadow-xl relative overflow-hidden flex flex-col justify-center items-center text-center group">
-                                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+                                <div className="absolute inset-0 opacity-20" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`}}></div>
                                 <ShieldAlert size={48} className="text-purple-400 mb-4 group-hover:scale-110 transition-transform" />
-                                <h3 className="font-bold text-xl mb-2">安全中心</h3>
-                                <p className="text-slate-400 text-sm mb-6 max-w-xs">当前系统版本 V5.0.2。数据库连接正常，RLS 策略已启用。</p>
-                                <div className="flex gap-3">
-                                    <button className="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full text-xs font-bold transition-colors border border-white/10">查看报告</button>
-                                    <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-full text-xs font-bold transition-colors">系统备份</button>
+                                <h3 className="font-bold text-xl mb-2">系统状态</h3>
+                                <p className="text-slate-400 text-sm mb-4 max-w-xs">数据库连接正常，RLS 策略已启用</p>
+                                <div className="grid grid-cols-2 gap-4 text-left w-full max-w-xs">
+                                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                        <div className="text-[10px] text-slate-500 uppercase">文章总数</div>
+                                        <div className="text-lg font-bold">{stats.posts}</div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                                        <div className="text-[10px] text-slate-500 uppercase">用户总数</div>
+                                        <div className="text-lg font-bold">{stats.users}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -318,14 +373,29 @@ export default function AdminPage() {
                                 <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:text-purple-600">已发布</button>
                                 <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:text-purple-600">草稿箱</button>
                             </div>
-                            <button onClick={() => exportData(posts, 'posts')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:text-purple-600 hover:border-purple-200 transition-colors">
-                                <Download size={14}/> 导出 CSV
-                            </button>
+                            <div className="flex gap-2">
+                                {selectedPosts.length > 0 && (
+                                    <button onClick={batchDeletePosts} className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-xs font-bold text-red-600 hover:bg-red-100 transition-colors">
+                                        <Trash2 size={14}/> 删除选中 ({selectedPosts.length})
+                                    </button>
+                                )}
+                                <button onClick={() => exportData(posts, 'posts')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:text-purple-600 hover:border-purple-200 transition-colors">
+                                    <Download size={14}/> 导出 CSV
+                                </button>
+                            </div>
                         </div>
                         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                             <table className="w-full text-left">
                                 <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                                     <tr>
+                                        <th className="p-5 w-12">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={selectedPosts.length === posts.length && posts.length > 0}
+                                              onChange={(e) => setSelectedPosts(e.target.checked ? posts.map(p => p.id) : [])}
+                                              className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                                            />
+                                        </th>
                                         <th className="p-5">文章信息</th>
                                         <th className="p-5">作者</th>
                                         <th className="p-5">状态标签</th>
@@ -334,10 +404,18 @@ export default function AdminPage() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50 text-sm">
                                     {posts.filter(p => p.title?.includes(searchTerm) || p.content?.includes(searchTerm)).map(post => (
-                                        <tr key={post.id} className="hover:bg-slate-50 group transition-colors">
+                                        <tr key={post.id} className={`hover:bg-slate-50 group transition-colors ${selectedPosts.includes(post.id) ? 'bg-purple-50' : ''}`}>
+                                            <td className="p-5">
+                                                <input 
+                                                  type="checkbox" 
+                                                  checked={selectedPosts.includes(post.id)}
+                                                  onChange={(e) => setSelectedPosts(e.target.checked ? [...selectedPosts, post.id] : selectedPosts.filter(id => id !== post.id))}
+                                                  className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                                                />
+                                            </td>
                                             <td className="p-5 max-w-md">
                                                 <div className="font-bold text-slate-800 truncate">{post.title || '无标题动态'}</div>
-                                                <div className="text-[10px] text-slate-400 mt-1 font-mono">ID: {post.id}</div>
+                                                <div className="text-[10px] text-slate-400 mt-1 font-mono">ID: {post.id} · {format(new Date(post.created_at), 'MM/dd HH:mm', { locale: zhCN })}</div>
                                             </td>
                                             <td className="p-5 text-slate-500 font-medium">{post.profiles?.username || 'Unknown'}</td>
                                             <td className="p-5">
@@ -488,16 +566,89 @@ export default function AdminPage() {
 
                  {/* 6. 系统设置 */}
                  {activeTab === 'system' && (
-                    <div className="bg-white p-12 rounded-3xl text-center border border-slate-200 shadow-sm flex flex-col items-center">
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                            <Settings size={40} className="text-slate-300" />
+                    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="space-y-6">
+                        {/* 自动刷新设置 */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><Settings size={18} className="text-purple-500"/> 控制台设置</h3>
+                            <div className="space-y-4">
+                                <SettingToggle 
+                                  icon={RefreshCw} 
+                                  label="自动刷新数据" 
+                                  description="仪表盘每30秒自动刷新统计数据"
+                                  checked={siteSettings.autoRefresh}
+                                  onChange={() => setSiteSettings(s => ({...s, autoRefresh: !s.autoRefresh}))}
+                                />
+                            </div>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">全局系统配置</h3>
-                        <p className="text-slate-400 text-sm mb-8 max-w-md">在此处配置全站维护模式、SEO 元数据及第三方 API 密钥。 (模块开发中)</p>
-                        <button disabled className="px-8 py-3 bg-slate-100 text-slate-400 rounded-xl font-bold text-xs cursor-not-allowed border border-slate-200">
-                            系统锁定
-                        </button>
-                    </div>
+
+                        {/* 数据管理 */}
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2"><Globe size={18} className="text-purple-500"/> 数据管理</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <button 
+                                  onClick={async () => {
+                                    await fetchPosts();
+                                    exportData(posts, 'posts');
+                                  }}
+                                  className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:text-purple-600 hover:border-purple-200 transition-colors flex items-center gap-3"
+                                >
+                                  <Download size={18} /> 导出所有文章
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    await fetchUsers();
+                                    exportData(users, 'users');
+                                  }}
+                                  className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:text-purple-600 hover:border-purple-200 transition-colors flex items-center gap-3"
+                                >
+                                  <Download size={18} /> 导出用户列表
+                                </button>
+                                <button 
+                                  onClick={async () => {
+                                    await fetchCodes();
+                                    exportData(codes, 'invite_codes');
+                                  }}
+                                  className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:text-purple-600 hover:border-purple-200 transition-colors flex items-center gap-3"
+                                >
+                                  <Download size={18} /> 导出邀请码
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 危险操作 */}
+                        <div className="bg-red-50 p-6 rounded-3xl border border-red-200">
+                            <h3 className="font-bold text-red-800 mb-4 flex items-center gap-2"><AlertTriangle size={18}/> 危险操作区</h3>
+                            <p className="text-red-600 text-sm mb-4">以下操作不可逆，请谨慎执行</p>
+                            <div className="flex gap-3 flex-wrap">
+                                <button 
+                                  onClick={() => {
+                                    if(confirm('确定要清空所有评论吗？此操作不可恢复！')) {
+                                      supabase.from('comments').delete().neq('id', 0).then(() => {
+                                        showToast('所有评论已清空');
+                                        fetchComments();
+                                      });
+                                    }
+                                  }}
+                                  className="px-4 py-2 bg-white border border-red-300 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
+                                >
+                                  清空所有评论
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    if(confirm('确定要清空所有已使用的邀请码吗？')) {
+                                      supabase.from('invite_codes').delete().eq('is_used', true).then(() => {
+                                        showToast('已使用的邀请码已清空');
+                                        fetchCodes();
+                                      });
+                                    }
+                                  }}
+                                  className="px-4 py-2 bg-white border border-red-300 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
+                                >
+                                  清理已用邀请码
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
                  )}
             </AnimatePresence>
         </div>
@@ -514,6 +665,37 @@ function NavButton({ active, id, icon: Icon, label, onClick }: any) {
             <Icon size={18} />
             <span className="hidden lg:block tracking-wide">{label}</span>
         </button>
+    )
+}
+
+function QuickAction({ icon: Icon, label, onClick, color }: { icon: any, label: string, onClick: () => void, color: string }) {
+    return (
+        <button onClick={onClick} className={`${color} text-white p-4 rounded-2xl flex flex-col items-center gap-2 hover:scale-105 transition-transform shadow-lg`}>
+            <Icon size={20} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+        </button>
+    )
+}
+
+function SettingToggle({ icon: Icon, label, description, checked, onChange, danger }: { icon: any, label: string, description: string, checked: boolean, onChange: () => void, danger?: boolean }) {
+    return (
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
+            <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${danger ? 'bg-red-100 text-red-500' : 'bg-purple-100 text-purple-500'}`}>
+                    <Icon size={18} />
+                </div>
+                <div>
+                    <div className="font-bold text-slate-800 text-sm">{label}</div>
+                    <div className="text-slate-400 text-xs">{description}</div>
+                </div>
+            </div>
+            <button 
+              onClick={onChange}
+              className={`w-12 h-6 rounded-full transition-colors relative ${checked ? (danger ? 'bg-red-500' : 'bg-purple-500') : 'bg-slate-300'}`}
+            >
+                <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow ${checked ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+        </div>
     )
 }
 

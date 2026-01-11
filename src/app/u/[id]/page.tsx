@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getBookmarkCount } from '@/lib/bookmarks';
+import { useToast } from '@/context/ToastContext';
 
 interface Profile {
   id: string;
@@ -24,6 +25,7 @@ interface Profile {
 export default function ProfilePage() {
   const { id } = useParams();
   const router = useRouter();
+  const toast = useToast();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isMe, setIsMe] = useState(false);
@@ -92,10 +94,10 @@ export default function ProfilePage() {
 
       setIsEditing(false);
       setProfile({ ...profile, ...formData } as Profile);
-      alert('✅ 个人资料已更新！');
+      toast.success('个人资料已更新！');
       
     } catch (error: any) {
-      alert('❌ 保存失败: ' + error.message);
+      toast.error('保存失败: ' + error.message);
     }
   }
 
@@ -104,7 +106,7 @@ export default function ProfilePage() {
     if (!file || !profile) return;
 
     if (file.size > 5 * 1024 * 1024) { 
-        alert("⚠️ 图片太大了 (限制 5MB)"); 
+        toast.error('图片太大了 (限制 5MB)'); 
         return; 
     }
 
@@ -131,7 +133,7 @@ export default function ProfilePage() {
       }
       
     } catch (error: any) { 
-        alert('上传失败: ' + error.message); 
+        toast.error('上传失败: ' + error.message); 
     } finally { 
         setUploadingType(null); 
     }

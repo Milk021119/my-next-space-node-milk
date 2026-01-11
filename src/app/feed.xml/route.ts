@@ -26,7 +26,11 @@ export async function GET() {
       ${post.tags?.map((tag: string) => `<category>${tag}</category>`).join('\n      ') || ''}
     </item>`).join('\n');
 
+  // 本地开发时使用相对路径，生产环境使用完整URL
+  const xslHref = process.env.NODE_ENV === 'development' ? '/feed.xsl' : `${siteUrl}/feed.xsl`;
+  
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="${xslHref}"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>SOYMILK</title>

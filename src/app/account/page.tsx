@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import Sidebar from '@/components/Sidebar';
+import PageLayout, { PageCard, SectionTitle } from '@/components/PageLayout';
 import { ShieldCheck, Mail, Smartphone, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -54,9 +54,11 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] font-sans flex">
-      <Sidebar />
-      
+    <PageLayout
+      title="账号安全中心"
+      subtitle="管理您的登录方式与安全凭证。"
+      maxWidth="3xl"
+    >
       {/* 消息提示弹窗 (Toast) */}
       <AnimatePresence>
         {message && (
@@ -66,8 +68,8 @@ export default function AccountPage() {
                 exit={{ opacity: 0, y: -20, x: '-50%' }}
                 className={`fixed top-8 left-1/2 z-50 px-6 py-3 rounded-full shadow-xl flex items-center gap-2 text-sm font-bold border ${
                     message.type === 'success' 
-                    ? 'bg-green-50 text-green-600 border-green-200' 
-                    : 'bg-red-50 text-red-500 border-red-200'
+                    ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' 
+                    : 'bg-red-50 text-red-500 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
                 }`}
             >
                 {message.type === 'success' ? <CheckCircle2 size={18}/> : <AlertCircle size={18}/>}
@@ -76,102 +78,89 @@ export default function AccountPage() {
         )}
       </AnimatePresence>
 
-      {/* 主内容区 */}
-      <main className="flex-1 lg:ml-72 2xl:ml-80 p-8 lg:p-16 transition-all duration-300">
-        <div className="max-w-3xl mx-auto pt-10">
-          
-          <div className="mb-10">
-              <h1 className="text-3xl font-black text-[var(--text-primary)] mb-2">账号安全中心</h1>
-              <p className="text-[var(--text-muted)] text-sm">管理您的登录方式与安全凭证。</p>
-          </div>
-
-          <div className="bg-[var(--bg-secondary)] rounded-[2rem] p-8 lg:p-10 shadow-sm border border-[var(--border-color)] space-y-10">
+      <PageCard className="p-8 lg:p-10 rounded-[2rem] space-y-10">
+        
+        {/* 1. 账号绑定 */}
+        <div>
+          <SectionTitle>账号绑定</SectionTitle>
+          <div className="space-y-4 mt-6">
             
-            {/* 1. 账号绑定 */}
-            <div>
-              <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-6">账号绑定</h3>
-              <div className="space-y-4">
-                
-                {/* 邮箱 (已绑定) */}
-                <div className="flex items-center justify-between p-5 bg-[var(--bg-tertiary)] rounded-2xl border border-[var(--border-color)]">
-                  <div className="flex items-center gap-4">
-                      <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
-                          <Mail size={20}/>
-                      </div>
-                      <div>
-                          <p className="font-bold text-[var(--text-primary)] text-sm">邮箱绑定</p>
-                          <p className="text-xs text-[var(--text-muted)] mt-0.5">{user?.email}</p>
-                      </div>
+            {/* 邮箱 (已绑定) */}
+            <div className="flex items-center justify-between p-5 bg-[var(--bg-tertiary)] rounded-2xl border border-[var(--border-color)]">
+              <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
+                      <Mail size={20}/>
                   </div>
-                  <span className="text-[10px] font-black text-green-500 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-800 uppercase tracking-wide">
-                      已绑定
-                  </span>
-                </div>
-
-                {/* 手机号 (暂不可用) */}
-                <div className="flex items-center justify-between p-5 bg-[var(--bg-tertiary)] rounded-2xl border border-[var(--border-color)] opacity-60 grayscale">
-                  <div className="flex items-center gap-4">
-                      <div className="p-3 bg-[var(--bg-tertiary)] text-[var(--text-muted)] rounded-xl">
-                          <Smartphone size={20}/>
-                      </div>
-                      <div>
-                          <p className="font-bold text-[var(--text-primary)] text-sm">手机号</p>
-                          <p className="text-xs text-[var(--text-muted)] mt-0.5">暂不支持绑定</p>
-                      </div>
+                  <div>
+                      <p className="font-bold text-[var(--text-primary)] text-sm">邮箱绑定</p>
+                      <p className="text-xs text-[var(--text-muted)] mt-0.5">{user?.email}</p>
                   </div>
-                  <button disabled className="text-xs font-bold text-[var(--text-muted)] px-3 py-1.5 border border-[var(--border-color)] rounded-full">去绑定</button>
-                </div>
-
               </div>
+              <span className="text-[10px] font-black text-green-500 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-800 uppercase tracking-wide">
+                  已绑定
+              </span>
             </div>
 
-            <hr className="border-[var(--border-color)]"/>
-
-            {/* 2. 修改密码 */}
-            <div>
-              <h3 className="text-xs font-black text-[var(--text-muted)] uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <ShieldCheck size={16}/> 安全设置
-              </h3>
-              
-              <div className="bg-[var(--bg-tertiary)] rounded-2xl p-6 border border-[var(--border-color)]">
-                  <div className="grid gap-4 mb-6">
-                      <div className="relative">
-                          <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"/>
-                          <input 
-                            type="password" 
-                            placeholder="输入新密码 (至少6位)" 
-                            value={newPassword} 
-                            onChange={e => setNewPassword(e.target.value)} 
-                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-3 pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
-                          />
-                      </div>
-                      <div className="relative">
-                          <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"/>
-                          <input 
-                            type="password" 
-                            placeholder="再次确认新密码" 
-                            value={confirmPassword} 
-                            onChange={e => setConfirmPassword(e.target.value)} 
-                            className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-3 pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
-                          />
-                      </div>
+            {/* 手机号 (暂不可用) */}
+            <div className="flex items-center justify-between p-5 bg-[var(--bg-tertiary)] rounded-2xl border border-[var(--border-color)] opacity-60 grayscale">
+              <div className="flex items-center gap-4">
+                  <div className="p-3 bg-[var(--bg-tertiary)] text-[var(--text-muted)] rounded-xl">
+                      <Smartphone size={20}/>
                   </div>
-                  
-                  <div className="flex justify-end">
-                      <button 
-                        onClick={handleUpdatePassword} 
-                        disabled={loading || !newPassword} 
-                        className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-600 dark:hover:bg-purple-400 hover:shadow-lg hover:shadow-purple-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                          {loading ? '处理中...' : '确认修改'}
-                      </button>
+                  <div>
+                      <p className="font-bold text-[var(--text-primary)] text-sm">手机号</p>
+                      <p className="text-xs text-[var(--text-muted)] mt-0.5">暂不支持绑定</p>
                   </div>
               </div>
+              <button disabled className="text-xs font-bold text-[var(--text-muted)] px-3 py-1.5 border border-[var(--border-color)] rounded-full">去绑定</button>
             </div>
 
           </div>
         </div>
-      </main>
-    </div>
+
+        <hr className="border-[var(--border-color)]"/>
+
+        {/* 2. 修改密码 */}
+        <div>
+          <SectionTitle icon={<ShieldCheck size={16}/>}>安全设置</SectionTitle>
+          
+          <div className="bg-[var(--bg-tertiary)] rounded-2xl p-6 border border-[var(--border-color)] mt-6">
+              <div className="grid gap-4 mb-6">
+                  <div className="relative">
+                      <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"/>
+                      <input 
+                        type="password" 
+                        placeholder="输入新密码 (至少6位)" 
+                        value={newPassword} 
+                        onChange={e => setNewPassword(e.target.value)} 
+                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-3 pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                      />
+                  </div>
+                  <div className="relative">
+                      <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"/>
+                      <input 
+                        type="password" 
+                        placeholder="再次确认新密码" 
+                        value={confirmPassword} 
+                        onChange={e => setConfirmPassword(e.target.value)} 
+                        className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-3 pl-12 pr-4 text-sm text-[var(--text-primary)] outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                      />
+                  </div>
+              </div>
+              
+              <div className="flex justify-end">
+                  <button 
+                    onClick={handleUpdatePassword} 
+                    disabled={loading || !newPassword} 
+                    className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-purple-600 dark:hover:bg-purple-400 hover:shadow-lg hover:shadow-purple-200 dark:hover:shadow-purple-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                      {loading ? '处理中...' : '确认修改'}
+                  </button>
+              </div>
+          </div>
+        </div>
+
+      </PageCard>
+    </PageLayout>
   );
 }

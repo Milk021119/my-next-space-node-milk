@@ -7,17 +7,20 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { ArrowLeft, Clock, User, Tag, BookOpen } from 'lucide-react';
+import { ArrowLeft, Clock, User, Tag, BookOpen, Eye } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import PostSkeleton from '@/components/PostSkeleton';
 import ParallaxImage from '@/components/ParallaxImage';
 import Sidebar from '@/components/Sidebar';
 import BookmarkButton from '@/components/BookmarkButton';
 import CommentSection from '@/components/comments/CommentSection';
-import ReadingProgress from '@/components/ReadingProgress';
 import ShareButton from '@/components/ShareButton';
 import TableOfContents from '@/components/TableOfContents';
+import RelatedPosts from '@/components/RelatedPosts';
+import Breadcrumb from '@/components/Breadcrumb';
+import { ArticleJsonLd } from '@/components/JsonLd';
 import { calculateReadingTime, formatWordCount } from '@/lib/readingTime';
+import { incrementViewCount } from '@/lib/views';
 
 interface Post {
   id: number;
@@ -28,6 +31,7 @@ interface Post {
   tags: string[];
   cover_url?: string;
   user_id?: string;
+  views?: number;
 }
 
 export default function PostDetail() {
@@ -35,6 +39,7 @@ export default function PostDetail() {
   const router = useRouter();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewCount, setViewCount] = useState(0);
 
   // 默认封面图库
   const ANIME_COVERS = ["/covers/cimgtwjgu000szrs56jyqr0mg.1200.jpg", "/covers/cit9ejr5100c6z35nrc61fd7j.1200.jpg", "/covers/ciuur1ym5000cbsjb09bof78s.1200.jpg", "/covers/claodyl1v0068m78hgrbs3myq.2160p.jpg", "/covers/clba9t5hw007qm78hd3cocnrm.2160p.jpg", "/covers/clbihqun3007ym78h7rsq6cda.2160p.jpg", "/covers/clc7emns2000w6v8hdu5d1k17.2160p.jpg", "/covers/cm7rftv17000hkl8h1gjn9e1v.2160p.jpg", "/covers/cm9lnaup3001ikl8h044j19za.2160p.jpg", "/covers/cm9za5ads001skl8h125v2zrw.2160p.jpg", "/covers/cmabaj7od001xkl8hbdm96tlk.2160p.jpg", "/covers/cmatsfxm100041k8h93jd61z7.2160p.jpg", "/covers/cmbmb7mr3000f1k8hefiqenx7.2160p.jpg", "/covers/cmju6k1jb00168w8hcb4pgdnd.2160p.jpg"];
@@ -48,6 +53,13 @@ export default function PostDetail() {
     setLoading(true);
     const { data } = await supabase.from('posts').select('*').eq('id', id).single();
     setPost(data);
+    if (data) {
+      setViewCount(data.views || 0);
+      // 增加浏览量
+      incrementViewCount(data.id).then(newCount => {
+        setViewCount(newCount);
+      });
+    }
     setLoading(false);
   }
 
@@ -70,12 +82,23 @@ export default function PostDetail() {
 
   // 计算阅读时间
   const readingTime = calculateReadingTime(post.content);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://soymilk.vercel.app';
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] font-sans selection:bg-purple-200 dark:selection:bg-purple-800 pb-20">
       <Sidebar />
-      <ReadingProgress />
       <TableOfContents content={post.content} />
+      
+      {/* JSON-LD 结构化数据 */}
+      <ArticleJsonLd
+        title={post.title}
+        description={post.content.slice(0, 160)}
+        url={`${siteUrl}/post/${post.id}`}
+        datePublished={post.created_at}
+        authorName={post.author_email?.split('@')[0] || 'SOYMILK'}
+        image={post.cover_url || `${siteUrl}${getAnimeCover(post.id)}`}
+        tags={post.tags}
+      />
       
       {/* 顶部透明导航 */}
       <nav className="fixed top-1 right-0 left-0 lg:left-72 2xl:left-80 z-30 px-6 py-4 flex justify-between items-center bg-[var(--bg-primary)]/70 backdrop-blur-xl border-b border-[var(--border-color)] transition-all duration-300">
@@ -111,6 +134,12 @@ export default function PostDetail() {
             animate={{ opacity: 1, y: 0 }} 
             className="bg-[var(--bg-card)]/80 backdrop-blur-xl rounded-[2.5rem] p-8 lg:p-16 shadow-2xl border border-[var(--border-color)]"
           >
+            {/* 面包屑导航 */}
+            <Breadcrumb items={[
+              { label: '文章', href: '/posts' },
+              { label: post.title }
+            ]} />
+            
             {/* 文章头部信息 */}
             <div className="mb-12 text-center border-b border-[var(--border-color)] pb-10">
               
@@ -135,6 +164,9 @@ export default function PostDetail() {
                   </span>
                   <span className="flex items-center gap-2">
                       <BookOpen size={14} /> {readingTime.text} · {formatWordCount(readingTime.words)}
+                  </span>
+                  <span className="flex items-center gap-2">
+                      <Eye size={14} /> {viewCount} 次阅读
                   </span>
               </div>
             </div>
@@ -178,6 +210,11 @@ export default function PostDetail() {
 
             {/* 评论区 */}
             <CommentSection postId={post.id} />
+
+            {/* 相关文章推荐 */}
+            <div className="mt-12 pt-8 border-t border-[var(--border-color)]">
+              <RelatedPosts currentPostId={post.id} tags={post.tags || []} />
+            </div>
 
           </motion.div>
         </main>

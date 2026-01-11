@@ -1,35 +1,26 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import LoginModal from '@/components/LoginModal'; 
-import Sidebar from '@/components/Sidebar'; 
 import PostSkeleton from '@/components/PostSkeleton'; 
 import ParallaxImage from '@/components/ParallaxImage'; 
 import Link from 'next/link'; 
 import { format } from 'date-fns';
-import { Heart, Terminal, Send } from 'lucide-react'; 
-import React, { useState, useEffect } from 'react';
+import { Heart, Terminal, Eye, Plus } from 'lucide-react'; 
+import React, { useState, useEffect, useCallback } from 'react';
 import { getAnimeCover } from '@/lib/constants';
-import { hasLiked, markAsLiked } from '@/lib/likes';
+import { checkLikedBatch, likePost } from '@/lib/likesDb';
 import { getBookmarkStatuses } from '@/lib/bookmarks';
 import BookmarkButton from '@/components/BookmarkButton';
-
-interface Post {
-  id: number;
-  title: string;
-  content: string; 
-  author_email: string;
-  likes: number;
-  created_at: string;
-  tags: string[]; 
-  cover_url?: string; 
-  type?: string;
-  user_id?: string;
-}
+import EmptyState from '@/components/EmptyState';
+import { useToast } from '@/context/ToastContext';
+import PageLayout, { PageFooter } from '@/components/PageLayout';
+import type { Post } from '@/types';
 
 export default function BlogPage() {
   const [user, setUser] = useState<any>(null);
+  const toast = useToast();
 
   // 监听用户登录状态
   useEffect(() => {
@@ -45,242 +36,222 @@ export default function BlogPage() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<number, boolean>>({});
+  const [likeStatuses, setLikeStatuses] = useState<Record<number, boolean>>({});
 
   // 初始化加载
   useEffect(() => {
     fetchPosts(0, true);
   }, []);
 
-  // 批量加载收藏状态
+  // 批量加载收藏和点赞状态
   useEffect(() => {
-    async function loadBookmarkStatuses() {
-      if (!user?.id || posts.length === 0) return;
+    async function loadStatuses() {
+      if (posts.length === 0) return;
       
       const postIds = posts.map(p => p.id);
-      const statuses = await getBookmarkStatuses(user.id, postIds);
-      setBookmarkStatuses(prev => ({ ...prev, ...statuses }));
+      
+      // 加载点赞状态
+      const likes = await checkLikedBatch(postIds, user?.id);
+      setLikeStatuses(prev => ({ ...prev, ...likes }));
+      
+      // 加载收藏状态（仅登录用户）
+      if (user?.id) {
+        const bookmarks = await getBookmarkStatuses(user.id, postIds);
+        setBookmarkStatuses(prev => ({ ...prev, ...bookmarks }));
+      }
     }
     
-    loadBookmarkStatuses();
+    loadStatuses();
   }, [user?.id, posts]);
 
   // 获取文章列表
-  async function fetchPosts(pageIndex: number, reset = false) {
+  const fetchPosts = useCallback(async (pageIndex: number, reset = false) => {
     if (reset) setLoading(true);
     const from = pageIndex * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
     
-    // 仅筛选 type 为 'article' 的文章
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('posts')
       .select('*')
       .eq('type', 'article') 
       .order('created_at', { ascending: false })
       .range(from, to);
     
+    if (error) {
+      toast.error('加载文章失败');
+      setLoading(false);
+      return;
+    }
+    
     if (data) {
       if (data.length < PAGE_SIZE) setHasMore(false);
       setPosts(prev => reset ? data : [...prev, ...data]);
     }
     setLoading(false);
-  }
+  }, [toast]);
 
-  // 点赞逻辑 - 添加防重复点赞
+  // 点赞逻辑 - 使用数据库记录
   async function handleLike(e: React.MouseEvent, postId: number, currentLikes: number) {
     e.preventDefault(); 
     e.stopPropagation();
     
-    // 检查是否已点赞
-    if (hasLiked(postId)) {
-      return; // 已点赞，不执行
-    }
+    if (likeStatuses[postId]) return;
     
-    const newLikes = (currentLikes || 0) + 1;
     // 乐观更新
+    const newLikes = (currentLikes || 0) + 1;
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: newLikes } : p));
-    // 记录点赞
-    markAsLiked(postId);
-    await supabase.from('posts').update({ likes: newLikes }).eq('id', postId);
+    setLikeStatuses(prev => ({ ...prev, [postId]: true }));
+    
+    const result = await likePost(postId, user?.id);
+    if (!result.success) {
+      // 回滚
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: currentLikes } : p));
+      setLikeStatuses(prev => ({ ...prev, [postId]: false }));
+    }
   }
 
-  // 发布文章逻辑
-  const handlePublish = async () => {
-    const title = (document.getElementById('post-title') as HTMLInputElement).value;
-    const content = (document.getElementById('post-content') as HTMLTextAreaElement).value;
-    const tagsInput = (document.getElementById('post-tags') as HTMLInputElement).value;
-    const cover_url = (document.getElementById('post-cover') as HTMLInputElement).value;
-    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()) : [];
-    
-    if(!title || !content) return;
-    
-    await supabase.from('posts').insert([{ 
-      title, 
-      content, 
-      author_email: user.email, 
-      user_id: user.id, 
-      likes: 0, 
-      tags, 
-      cover_url, 
-      type: 'article' 
-    }]);
-    
-    fetchPosts(0, true); // 刷新列表
-    
-    // 清空表单
-    (document.getElementById('post-title') as HTMLInputElement).value = "";
-    (document.getElementById('post-content') as HTMLTextAreaElement).value = "";
-    (document.getElementById('post-tags') as HTMLInputElement).value = "";
-    (document.getElementById('post-cover') as HTMLInputElement).value = "";
-  };
-
   return (
-    <div className="relative min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans selection:bg-purple-200 dark:selection:bg-purple-800 overflow-x-hidden">
-      
-      {/* 🔮 背景特效 */}
-      <div className="fixed inset-0 overflow-hidden -z-10">
-        <motion.div animate={{ x: [0, 50, 0], y: [0, 30, 0] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] bg-cyan-100/40 dark:bg-cyan-900/20 rounded-full blur-[120px]" />
-        <motion.div animate={{ x: [0, -50, 0], y: [0, -30, 0] }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }} className="absolute -bottom-[10%] -right-[10%] w-[60%] h-[60%] bg-pink-100/40 dark:bg-pink-900/20 rounded-full blur-[120px]" />
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-      </div>
-
+    <PageLayout maxWidth="5xl" className="py-24">
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <Sidebar />
+      
+      {/* 页面头部 */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-10"
+      >
+        <h1 className="text-4xl lg:text-5xl font-black text-[var(--text-primary)] tracking-tight mb-3">
+          文章
+        </h1>
+        <p className="text-[var(--text-secondary)] text-lg">
+          探索技术与创意的交汇点
+        </p>
+      </motion.div>
 
-      {/* --- 🎨 内容区 --- */}
-      <main className="w-full lg:ml-72 2xl:ml-80 flex-1 py-24 min-h-screen transition-all duration-300">
-        <div className="max-w-5xl mx-auto px-6 lg:px-10">
-          
-          {/* 发布框 (仅登录可见) */}
-          <AnimatePresence>
-            {user && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-16">
-                <div className="p-6 bg-[var(--bg-card)] backdrop-blur-md rounded-[2rem] border border-[var(--border-color)] shadow-xl hover:shadow-2xl transition-all duration-500">
-                  <div className="flex items-center space-x-2 mb-6 text-purple-500/60"><Terminal size={14} /><span className="text-[10px] font-bold uppercase tracking-widest">发布新文章</span></div>
-                  <div className="flex flex-col gap-4">
-                      <input id="post-title" type="text" placeholder="输入文章标题..." className="w-full bg-transparent text-xl font-black outline-none placeholder:text-[var(--text-muted)] text-[var(--text-primary)]" />
-                      <div className="flex gap-4">
-                          <input id="post-tags" type="text" placeholder="标签 (如: Code, Life)" className="flex-1 bg-[var(--bg-tertiary)] rounded-lg px-4 py-2 text-sm font-mono text-purple-600 dark:text-purple-400 outline-none placeholder:text-[var(--text-muted)]" />
-                          <input id="post-cover" type="text" placeholder="封面图链接 (可选)" className="flex-1 bg-[var(--bg-tertiary)] rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] outline-none placeholder:text-[var(--text-muted)]" />
-                      </div>
-                      <textarea id="post-content" placeholder="在此输入正文 (支持 Markdown)..." className="w-full bg-transparent text-[var(--text-secondary)] outline-none h-24 resize-none font-medium placeholder:text-[var(--text-muted)] font-mono text-sm p-2"></textarea>
+      {/* 发布入口按钮 (仅登录可见) */}
+      {user && (
+        <Link href="/write">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-10 w-full p-5 bg-[var(--bg-card)] hover:bg-[var(--bg-secondary)] backdrop-blur-md rounded-2xl border border-dashed border-[var(--border-color)] hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-300 flex items-center justify-center gap-3 text-[var(--text-muted)] hover:text-purple-600 group cursor-pointer"
+          >
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/30 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/50 transition-colors">
+              <Plus size={20} className="text-purple-500" />
+            </div>
+            <span className="text-sm font-bold">写一篇新文章</span>
+          </motion.div>
+        </Link>
+      )}
+
+      {/* 文章画廊 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {loading && posts.length === 0 
+          ? Array(4).fill(0).map((_, i) => <PostSkeleton key={i} />) 
+          : posts.length === 0 
+          ? <div className="col-span-full"><EmptyState type="posts" /></div>
+          : posts.map((post) => (
+            <motion.article 
+              key={post.id}
+              initial={{ opacity: 0, y: 30 }} 
+              whileInView={{ opacity: 1, y: 0 }} 
+              viewport={{ once: true, margin: "-50px" }}
+              whileHover={{ y: -8 }} 
+              className="relative group flex flex-col h-full bg-[var(--bg-card)] backdrop-blur-md rounded-[2rem] border border-[var(--border-color)] shadow-sm hover:shadow-2xl hover:bg-[var(--bg-card-hover)] transition-all duration-500 overflow-hidden"
+            >
+              {/* 全局链接：铺满整个卡片 */}
+              <Link 
+                href={`/post/${post.id}`} 
+                className="absolute inset-0 z-0"
+                aria-label={`阅读 ${post.title}`}
+              />
+
+              {/* 封面区 */}
+              <div className="aspect-video w-full overflow-hidden relative bg-slate-200">
+                  <ParallaxImage src={post.cover_url || getAnimeCover(post.id)} />
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black text-slate-800 shadow-sm pointer-events-none z-10">
+                      LOG #{post.id}
                   </div>
-                  <div className="flex justify-end mt-4">
-                    <button onClick={handlePublish} className="px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-lg flex items-center gap-2">
-                      <Send size={12} /> 发布文章
-                    </button>
+              </div>
+
+              {/* 内容区 */}
+              <div className="flex-1 p-6 lg:p-8 flex flex-col relative z-10 pointer-events-none">
+                <div className="flex items-center space-x-3 mb-4 flex-wrap">
+                  <span className="text-[10px] text-slate-400 font-mono tracking-wide uppercase">
+                    {format(new Date(post.created_at), 'MM/dd')}
+                  </span>
+                  
+                  {/* Tags 链接 */}
+                  <div className="flex gap-2 pointer-events-auto">
+                    {post.tags?.map(tag => (
+                      <Link 
+                        key={tag} 
+                        href={`/tags/${tag}`}
+                        className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase cursor-pointer hover:bg-purple-600 hover:text-white transition-colors relative z-20"
+                      >
+                         {tag}
+                      </Link>
+                    ))}
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
-          {/* 文章画廊 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {loading && posts.length === 0 
-              ? Array(4).fill(0).map((_, i) => <PostSkeleton key={i} />) 
-              : posts.map((post) => (
-                // ✅ 修复：外层改为普通 div，避免 <a> 嵌套错误
-                <motion.article 
-                  key={post.id}
-                  initial={{ opacity: 0, y: 30 }} 
-                  whileInView={{ opacity: 1, y: 0 }} 
-                  viewport={{ once: true, margin: "-50px" }}
-                  whileHover={{ y: -8 }} 
-                  className="relative group flex flex-col h-full bg-[var(--bg-card)] backdrop-blur-md rounded-[2rem] border border-[var(--border-color)] shadow-sm hover:shadow-2xl hover:bg-[var(--bg-card-hover)] transition-all duration-500 overflow-hidden"
-                >
-                  {/* 1. 全局链接：铺满整个卡片，设为绝对定位且层级较低 */}
-                  <Link 
-                    href={`/post/${post.id}`} 
-                    className="absolute inset-0 z-0"
-                    aria-label={`阅读 ${post.title}`}
-                  />
+                <h2 className="text-2xl font-black tracking-tighter mb-4 text-[var(--text-primary)] group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors leading-tight">
+                  {post.title}
+                </h2>
+                
+                <p className="flex-1 text-[var(--text-secondary)] text-sm leading-relaxed line-clamp-3 mb-6 opacity-70 font-medium">
+                  {post.content.slice(0, 150)}{post.content.length > 150 ? '...' : ''}
+                </p>
 
-                  {/* 封面区 */}
-                  <div className="aspect-video w-full overflow-hidden relative bg-slate-200">
-                      <ParallaxImage src={post.cover_url || getAnimeCover(post.id)} />
-                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black text-slate-800 shadow-sm pointer-events-none z-10">
-                          LOG #{post.id}
-                      </div>
-                  </div>
-
-                  {/* 内容区 */}
-                  <div className="flex-1 p-6 lg:p-8 flex flex-col relative z-10 pointer-events-none">
-                    {/* pointer-events-none 让点击穿透给底下的 Link */}
+                <div className="flex items-center justify-between pt-6 border-t border-[var(--border-color)] mt-auto pointer-events-auto">
+                  {/* 点赞按钮 */}
+                  <div className="flex items-center space-x-3">
+                    <button 
+                      onClick={(e) => handleLike(e, post.id, post.likes || 0)}
+                      disabled={likeStatuses[post.id]}
+                      className={`flex items-center space-x-2 transition-colors group/like z-20 relative ${likeStatuses[post.id] ? 'text-pink-500 cursor-default' : 'text-slate-400 hover:text-pink-500'}`}
+                    >
+                      <Heart size={16} className={likeStatuses[post.id] || (post.likes || 0) > 0 ? 'fill-pink-500 text-pink-500' : ''} />
+                      <span className="text-xs font-bold">{post.likes || 0}</span>
+                    </button>
                     
-                    <div className="flex items-center space-x-3 mb-4 flex-wrap">
-                      <span className="text-[10px] text-slate-400 font-mono tracking-wide uppercase">
-                        {format(new Date(post.created_at), 'MM/dd')}
-                      </span>
-                      
-                      {/* ✅ Tags 链接：恢复点击事件并提高层级 */}
-                      <div className="flex gap-2 pointer-events-auto">
-                        {post.tags?.map(tag => (
-                          <Link 
-                            key={tag} 
-                            href={`/tags/${tag}`}
-                            className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full uppercase cursor-pointer hover:bg-purple-600 hover:text-white transition-colors relative z-20"
-                          >
-                             {tag}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-
-                    <h2 className="text-2xl font-black tracking-tighter mb-4 text-[var(--text-primary)] group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors leading-tight">
-                      {post.title}
-                    </h2>
+                    {/* 浏览量 */}
+                    <span className="flex items-center space-x-1 text-slate-400 z-20 relative">
+                      <Eye size={14} />
+                      <span className="text-xs font-bold">{post.views || 0}</span>
+                    </span>
                     
-                    <p className="flex-1 text-[var(--text-secondary)] text-sm leading-relaxed line-clamp-3 mb-6 opacity-70 font-medium">
-                      {post.content.slice(0, 150)}{post.content.length > 150 ? '...' : ''}
-                    </p>
-
-                    <div className="flex items-center justify-between pt-6 border-t border-[var(--border-color)] mt-auto pointer-events-auto">
-                      {/* 点赞按钮需要可点击 */}
-                      <div className="flex items-center space-x-3">
-                        <button 
-                          onClick={(e) => handleLike(e, post.id, post.likes || 0)}
-                          disabled={hasLiked(post.id)}
-                          className={`flex items-center space-x-2 transition-colors group/like z-20 relative ${hasLiked(post.id) ? 'text-pink-500 cursor-default' : 'text-slate-400 hover:text-pink-500'}`}
-                        >
-                          <Heart size={16} className={hasLiked(post.id) || (post.likes || 0) > 0 ? 'fill-pink-500 text-pink-500' : ''} />
-                          <span className="text-xs font-bold">{post.likes || 0}</span>
-                        </button>
-                        
-                        {/* 收藏按钮 */}
-                        <BookmarkButton 
-                          postId={post.id} 
-                          initialBookmarked={bookmarkStatuses[post.id] || false}
-                          size="sm"
-                          className="z-20 relative"
-                        />
-                      </div>
-                      
-                      <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 group-hover:text-purple-600 flex items-center gap-1">
-                        阅读全文 <Terminal size={10} />
-                      </span>
-                    </div>
+                    {/* 收藏按钮 */}
+                    <BookmarkButton 
+                      postId={post.id} 
+                      initialBookmarked={bookmarkStatuses[post.id] || false}
+                      size="sm"
+                      className="z-20 relative"
+                    />
                   </div>
-                </motion.article>
-            ))}
-          </div>
+                  
+                  <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 group-hover:text-purple-600 flex items-center gap-1">
+                    阅读全文 <Terminal size={10} />
+                  </span>
+                </div>
+              </div>
+            </motion.article>
+        ))}
+      </div>
 
-          {/* 加载更多 */}
-          {hasMore && !loading && (
-            <div className="mt-32 flex justify-center">
-              <button 
-                onClick={() => { const next = page + 1; setPage(next); fetchPosts(next); }}
-                className="px-8 py-3 bg-[var(--bg-card)] rounded-full text-xs font-black text-[var(--text-muted)] uppercase tracking-widest hover:bg-[var(--bg-secondary)] hover:text-purple-600 transition-all shadow-sm"
-              >
-                加载更多
-              </button>
-            </div>
-          )}
-
-          <footer className="mt-40 pb-20 text-center text-[10px] text-[var(--text-muted)] font-black tracking-[0.5em] uppercase opacity-50">
-              --- End of Signal ---
-          </footer>
+      {/* 加载更多 */}
+      {hasMore && !loading && (
+        <div className="mt-32 flex justify-center">
+          <button 
+            onClick={() => { const next = page + 1; setPage(next); fetchPosts(next); }}
+            className="px-8 py-3 bg-[var(--bg-card)] rounded-full text-xs font-black text-[var(--text-muted)] uppercase tracking-widest hover:bg-[var(--bg-secondary)] hover:text-purple-600 transition-all shadow-sm"
+          >
+            加载更多
+          </button>
         </div>
-      </main>
-    </div>
+      )}
+
+      <PageFooter />
+    </PageLayout>
   );
 }

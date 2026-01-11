@@ -15,11 +15,13 @@ import {
   X,
   User,
   Radio,
-  Rss
+  Rss,
+  Archive
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import MiniPlayer from '@/components/player/MiniPlayer'; 
+import NeteasePlayer from '@/components/player/NeteasePlayer';
 import LoginModal from '@/components/LoginModal';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -40,6 +42,7 @@ export default function Sidebar() {
     { name: '文章', path: '/posts', icon: BookOpen },
     { name: '动态', path: '/logs', icon: Coffee },
     { name: '信号塔', path: '/chat', icon: Radio },
+    { name: '归档', path: '/archive', icon: Archive },
   ];
 
   // 动态菜单逻辑
@@ -133,7 +136,7 @@ export default function Sidebar() {
           {/* 底部区域 */}
           <div className="flex-shrink-0 mt-6 pt-6 border-t border-[var(--border-color)] space-y-6 bg-transparent">
             
-            <MiniPlayer />
+            <NeteasePlayer />
 
             {/* 主题切换和 RSS */}
             <div className="flex justify-center items-center gap-3">

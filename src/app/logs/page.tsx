@@ -1,48 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase'; 
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns';
 import { zhCN } from 'date-fns/locale'; 
-import { Heart, MessageSquare, Send, Image as ImageIcon, X, Loader2, Trash2, User } from 'lucide-react';
+import { Heart, MessageSquare, Send, Image as ImageIcon, X, Loader2, Trash2, User, Sparkles, Clock, Calendar } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import Sidebar from '@/components/Sidebar';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import PageLayout from '@/components/PageLayout';
+import { cn } from '@/lib/utils';
 import { validateImageFile } from '@/lib/constants';
-import { hasLiked, markAsLiked } from '@/lib/likes';
+import { checkLikedBatch, likePost } from '@/lib/likesDb';
 import { getBookmarkStatuses } from '@/lib/bookmarks';
 import BookmarkButton from '@/components/BookmarkButton';
-
-// --- 工具函数 ---
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-// --- 类型定义 ---
-type Post = {
-  id: number;
-  content: string; 
-  created_at: string;
-  user_id: string;
-  likes: number;
-  profiles: {
-    username: string;
-    avatar_url: string;
-  } | null;
-};
-
-type Comment = {
-  id: number;
-  content: string;
-  created_at: string;
-  user_id: string;
-  profiles: {
-    username: string;
-    avatar_url: string;
-  } | null;
-};
+import { useToast } from '@/context/ToastContext';
+import type { Post, Comment } from '@/types';
 
 // --- 工具: 提取图片 ---
 const extractImages = (markdown: string) => {
@@ -56,35 +28,58 @@ const extractImages = (markdown: string) => {
   return { text, images };
 };
 
-// --- 组件: 图片九宫格 ---
+// --- 工具: 格式化日期分组 ---
+const formatDateGroup = (date: Date) => {
+  if (isToday(date)) return '今天';
+  if (isYesterday(date)) return '昨天';
+  return format(date, 'MM月dd日', { locale: zhCN });
+};
+
+// --- 组件: 图片九宫格 (美化版) ---
 const ImageGrid = ({ images, onImageClick }: { images: string[], onImageClick: (src: string) => void }) => {
   if (images.length === 0) return null;
 
-  let gridClass = "mt-3 grid gap-1 rounded-xl overflow-hidden";
   if (images.length === 1) {
     return (
-      <div className="mt-3 relative w-full max-w-[80%] aspect-video rounded-xl overflow-hidden border border-slate-200 cursor-zoom-in" onClick={(e) => { e.stopPropagation(); onImageClick(images[0]); }}>
-        <img src={images[0]} alt="moment" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+      <div 
+        className="mt-4 relative w-full max-w-md aspect-[4/3] rounded-2xl overflow-hidden border border-[var(--border-color)] cursor-zoom-in group shadow-sm" 
+        onClick={(e) => { e.stopPropagation(); onImageClick(images[0]); }}
+      >
+        <img src={images[0]} alt="moment" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
     );
   }
-  
-  if (images.length === 2) gridClass += " grid-cols-2 aspect-video";
-  else if (images.length === 4) gridClass += " grid-cols-2 aspect-square max-w-[300px]";
-  else gridClass += " grid-cols-3 aspect-square";
+
+  const gridClass = cn(
+    "mt-4 grid gap-1.5 rounded-2xl overflow-hidden",
+    images.length === 2 && "grid-cols-2",
+    images.length === 3 && "grid-cols-3",
+    images.length === 4 && "grid-cols-2 max-w-xs",
+    images.length > 4 && "grid-cols-3"
+  );
 
   return (
     <div className={gridClass}>
-      {images.map((img, i) => (
-        <div key={i} className="relative bg-slate-100 overflow-hidden cursor-zoom-in aspect-square" onClick={(e) => { e.stopPropagation(); onImageClick(img); }}>
-          <img src={img} alt={`img-${i}`} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
+      {images.slice(0, 9).map((img, i) => (
+        <div 
+          key={i} 
+          className="relative bg-[var(--bg-tertiary)] overflow-hidden cursor-zoom-in aspect-square group rounded-xl" 
+          onClick={(e) => { e.stopPropagation(); onImageClick(img); }}
+        >
+          <img src={img} alt={`img-${i}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+          {i === 8 && images.length > 9 && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-bold text-xl">
+              +{images.length - 9}
+            </div>
+          )}
         </div>
       ))}
     </div>
   );
 };
 
-// --- 组件: 评论区 (已修复 UI 偏移和即时显示) ---
+// --- 组件: 评论区 (美化版) ---
 const CommentSection = ({ postId, postAuthorId, currentUser }: { postId: number, postAuthorId: string, currentUser: any }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState('');
@@ -95,7 +90,6 @@ const CommentSection = ({ postId, postAuthorId, currentUser }: { postId: number,
     fetchComments();
     const channel = supabase.channel(`comments-${postId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments', filter: `post_id=eq.${postId}` }, (payload) => {
-        // 防止重复添加自己刚发的评论
         if (payload.new.user_id !== currentUser?.id) {
           fetchComments();
         }
@@ -118,11 +112,12 @@ const CommentSection = ({ postId, postAuthorId, currentUser }: { postId: number,
     if (!content.trim() || !currentUser) return;
     setSubmitting(true);
     
-    // 1. 乐观更新：立即在界面显示评论
     const tempId = Date.now();
     const commentText = content.trim();
     const optimisticComment: Comment = {
       id: tempId,
+      post_id: postId,
+      parent_id: null,
       content: commentText,
       created_at: new Date().toISOString(),
       user_id: currentUser.id,
@@ -133,10 +128,9 @@ const CommentSection = ({ postId, postAuthorId, currentUser }: { postId: number,
     };
 
     setComments(prev => [...prev, optimisticComment]);
-    setContent(''); // 立即清空输入框
+    setContent('');
 
     try {
-      // 2. 发送请求
       const { data: insertedData, error } = await supabase.from('comments').insert({
         post_id: postId,
         user_id: currentUser.id,
@@ -144,11 +138,8 @@ const CommentSection = ({ postId, postAuthorId, currentUser }: { postId: number,
       }).select().single();
 
       if (error) throw error;
-      
-      // 3. 替换为真实数据
       setComments(prev => prev.map(c => c.id === tempId ? { ...c, id: insertedData.id } : c));
 
-      // 4. 发送通知
       if (postAuthorId !== currentUser.id) {
         await supabase.from('notifications').insert({
           recipient_id: postAuthorId,
@@ -160,9 +151,8 @@ const CommentSection = ({ postId, postAuthorId, currentUser }: { postId: number,
       }
     } catch (err) {
       console.error(err);
-      alert('评论发送失败');
-      setComments(prev => prev.filter(c => c.id !== tempId)); // 回滚
-      setContent(commentText); // 恢复文本
+      setComments(prev => prev.filter(c => c.id !== tempId));
+      setContent(commentText);
     } finally {
       setSubmitting(false);
     }
@@ -175,104 +165,241 @@ const CommentSection = ({ postId, postAuthorId, currentUser }: { postId: number,
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-100/50">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="mt-5 pt-5 border-t border-dashed border-[var(--border-color)]"
+    >
       {/* 评论列表 */}
-      <div className="space-y-4 mb-5 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
-        {loading ? <div className="text-center py-2"><Loader2 size={16} className="animate-spin inline text-slate-400"/></div> : 
-         comments.length === 0 ? <p className="text-xs text-slate-400 italic text-center py-2">暂无评论，来坐沙发...</p> :
-         comments.map((c) => (
-           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} key={c.id} className="flex gap-3 text-sm group">
-             <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-100"><img src={c.profiles?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover"/></div>
-             <div className="flex-1 bg-slate-50 p-2.5 rounded-2xl rounded-tl-none hover:bg-slate-100 transition-colors">
-               <div className="flex justify-between items-baseline mb-0.5">
-                 <span className="font-bold text-slate-700 text-xs">{c.profiles?.username || '用户'}</span>
-                 <span className="text-[10px] text-slate-400">{formatDistanceToNow(new Date(c.created_at), { locale: zhCN, addSuffix: true })}</span>
-               </div>
-               <p className="text-slate-600 text-xs leading-relaxed break-all">{c.content}</p>
-             </div>
-             {(currentUser?.id === c.user_id || currentUser?.id === postAuthorId) && (
-               <button onClick={() => handleDelete(c.id)} className="self-center p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
-             )}
-           </motion.div>
-         ))
-        }
+      <div className="space-y-3 mb-4 max-h-[280px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[var(--border-color)]">
+        {loading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 size={20} className="animate-spin text-[var(--accent-color)]"/>
+          </div>
+        ) : comments.length === 0 ? (
+          <div className="text-center py-6">
+            <MessageSquare size={24} className="mx-auto mb-2 text-[var(--text-muted)] opacity-50" />
+            <p className="text-xs text-[var(--text-muted)]">还没有评论，来抢沙发~</p>
+          </div>
+        ) : (
+          comments.map((c, index) => (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ delay: index * 0.05 }}
+              key={c.id} 
+              className="flex gap-3 group"
+            >
+              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 ring-2 ring-[var(--bg-tertiary)]">
+                <img src={c.profiles?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover"/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="inline-block bg-[var(--bg-tertiary)] px-4 py-2.5 rounded-2xl rounded-tl-sm">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-[var(--text-primary)] text-xs">{c.profiles?.username || '用户'}</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">
+                      {formatDistanceToNow(new Date(c.created_at), { locale: zhCN, addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className="text-[var(--text-secondary)] text-sm leading-relaxed break-words">{c.content}</p>
+                </div>
+              </div>
+              {(currentUser?.id === c.user_id || currentUser?.id === postAuthorId) && (
+                <button 
+                  onClick={() => handleDelete(c.id)} 
+                  className="self-center p-1.5 text-[var(--text-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
+                >
+                  <Trash2 size={14}/>
+                </button>
+              )}
+            </motion.div>
+          ))
+        )}
       </div>
-      {/* 输入框区域 */}
-      <div className="flex gap-3 items-end">
-        <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-200">
-           {currentUser ? <img src={currentUser.user_metadata?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover"/> : <div className="flex items-center justify-center h-full text-slate-400"><User size={14}/></div>}
+      
+      {/* 输入框 */}
+      <div className="flex gap-3 items-center bg-[var(--bg-tertiary)] rounded-full p-1.5 pl-4">
+        <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-2 ring-white/50 dark:ring-black/20">
+          {currentUser ? (
+            <img src={currentUser.user_metadata?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover"/>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-[var(--bg-secondary)] text-[var(--text-muted)]">
+              <User size={12}/>
+            </div>
+          )}
         </div>
-        <div className="flex-1 relative">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={!currentUser || submitting}
-            placeholder={currentUser ? "写下评论..." : "请先登录"}
-            className="w-full bg-slate-100/50 hover:bg-white focus:bg-white border border-transparent focus:border-purple-200 rounded-2xl py-2.5 pl-4 pr-12 text-xs outline-none transition-all resize-none min-h-[40px] h-[40px] focus:h-[80px]"
-          />
-          <button 
-            onClick={handleSubmit} 
-            disabled={!content.trim() || submitting} 
-            className="absolute bottom-2 right-2 p-1.5 bg-slate-900 text-white rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:bg-purple-600 transition-all shadow-sm active:scale-95"
-          >
-            {submitting ? <Loader2 size={12} className="animate-spin"/> : <Send size={12} className="ml-0.5"/>}
-          </button>
-        </div>
+        <input
+          type="text"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+          disabled={!currentUser || submitting}
+          placeholder={currentUser ? "写下你的评论..." : "请先登录"}
+          className="flex-1 bg-transparent text-sm outline-none text-[var(--text-secondary)] placeholder:text-[var(--text-muted)]"
+        />
+        <button 
+          onClick={handleSubmit} 
+          disabled={!content.trim() || submitting} 
+          className="p-2 bg-[var(--accent-color)] text-white rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 transition-all active:scale-95"
+        >
+          {submitting ? <Loader2 size={14} className="animate-spin"/> : <Send size={14}/>}
+        </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-// --- 主页面 ---
-export default function LogsPage() {
-  const [user, setUser] = useState<any>(null);
-  const [moments, setMoments] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+
+// --- 组件: 动态卡片 (美化版) ---
+const MomentCard = ({ 
+  post, 
+  user, 
+  likeStatus, 
+  bookmarkStatus,
+  isCommentOpen,
+  onLike, 
+  onToggleComment,
+  onImageClick 
+}: { 
+  post: Post, 
+  user: any,
+  likeStatus: boolean,
+  bookmarkStatus: boolean,
+  isCommentOpen: boolean,
+  onLike: () => void,
+  onToggleComment: () => void,
+  onImageClick: (src: string) => void
+}) => {
+  const { text, images } = extractImages(post.content);
   
-  // 发布状态
+  return (
+    <motion.article 
+      initial={{ opacity: 0, y: 30 }} 
+      whileInView={{ opacity: 1, y: 0 }} 
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.5 }}
+      className="relative"
+    >
+      {/* 时间线连接点 */}
+      <div className="absolute -left-[41px] top-6 w-3 h-3 rounded-full bg-[var(--accent-color)] ring-4 ring-[var(--bg-primary)] z-10 hidden lg:block" />
+      
+      <div className="bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl overflow-hidden border border-[var(--border-color)] shadow-sm hover:shadow-lg hover:border-[var(--accent-color)]/20 transition-all duration-300 group">
+        {/* 卡片头部 */}
+        <div className="p-5 pb-0">
+          <div className="flex items-start gap-4">
+            {/* 头像 */}
+            <div className="relative">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 p-0.5 shadow-lg shadow-purple-500/20">
+                <img 
+                  src={post.profiles?.avatar_url || '/default-avatar.png'} 
+                  className="w-full h-full object-cover rounded-[14px] bg-[var(--bg-secondary)]" 
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[var(--bg-card)]" />
+            </div>
+            
+            {/* 用户信息 */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <h3 className="font-bold text-[var(--text-primary)] truncate">
+                  {post.profiles?.username || '未知用户'}
+                </h3>
+                <span className="px-2 py-0.5 bg-[var(--accent-color)]/10 text-[var(--accent-color)] text-[10px] font-bold rounded-full">
+                  博主
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                <Clock size={12} />
+                <span>{formatDistanceToNow(new Date(post.created_at), { locale: zhCN, addSuffix: true })}</span>
+                <span className="opacity-50">·</span>
+                <span className="font-mono">{format(new Date(post.created_at), 'HH:mm')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* 内容区域 */}
+        <div className="px-5 py-4">
+          <div className="prose prose-slate dark:prose-invert prose-sm max-w-none text-[var(--text-secondary)] leading-relaxed">
+            <ReactMarkdown>{text}</ReactMarkdown>
+          </div>
+          <ImageGrid images={images} onImageClick={onImageClick} />
+        </div>
+        
+        {/* 交互栏 */}
+        <div className="px-5 py-3 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              {/* 点赞按钮 */}
+              <motion.button 
+                whileTap={{ scale: 0.9 }}
+                onClick={onLike}
+                disabled={likeStatus}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
+                  likeStatus 
+                    ? "bg-pink-50 dark:bg-pink-900/20 text-pink-500" 
+                    : "hover:bg-pink-50 dark:hover:bg-pink-900/20 text-[var(--text-muted)] hover:text-pink-500"
+                )}
+              >
+                <Heart size={18} className={cn(likeStatus && "fill-current")} />
+                <span className="text-sm font-medium">{post.likes || 0}</span>
+              </motion.button>
+              
+              {/* 评论按钮 */}
+              <motion.button 
+                whileTap={{ scale: 0.9 }}
+                onClick={onToggleComment}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
+                  isCommentOpen 
+                    ? "bg-purple-50 dark:bg-purple-900/20 text-purple-500" 
+                    : "hover:bg-purple-50 dark:hover:bg-purple-900/20 text-[var(--text-muted)] hover:text-purple-500"
+                )}
+              >
+                <MessageSquare size={18} className={cn(isCommentOpen && "fill-current")} />
+                <span className="text-sm font-medium">评论</span>
+              </motion.button>
+            </div>
+            
+            {/* 收藏按钮 */}
+            <BookmarkButton 
+              postId={post.id} 
+              initialBookmarked={bookmarkStatus}
+              size="sm"
+            />
+          </div>
+        </div>
+        
+        {/* 评论区 */}
+        <AnimatePresence>
+          {isCommentOpen && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }} 
+              animate={{ height: 'auto', opacity: 1 }} 
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden border-t border-[var(--border-color)]"
+            >
+              <div className="p-5 bg-[var(--bg-secondary)]/50">
+                <CommentSection postId={post.id} postAuthorId={post.user_id} currentUser={user} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.article>
+  );
+};
+
+// --- 组件: 发布框 (美化版) ---
+const PublishBox = ({ user, onPublish }: { user: any, onPublish: () => void }) => {
   const [newContent, setNewContent] = useState('');
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // 交互状态
-  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [activeCommentId, setActiveCommentId] = useState<number | null>(null);
-  const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<number, boolean>>({});
-
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-      fetchMoments();
-    };
-    init();
-  }, []);
-
-  // 批量加载收藏状态
-  useEffect(() => {
-    async function loadBookmarkStatuses() {
-      if (!user?.id || moments.length === 0) return;
-      
-      const postIds = moments.map(m => m.id);
-      const statuses = await getBookmarkStatuses(user.id, postIds);
-      setBookmarkStatuses(prev => ({ ...prev, ...statuses }));
-    }
-    
-    loadBookmarkStatuses();
-  }, [user?.id, moments]);
-
-  const fetchMoments = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('posts')
-      .select(`*, profiles:user_id ( avatar_url, username )`)
-      .eq('type', 'moment')
-      .order('created_at', { ascending: false });
-    
-    if (!error && data) setMoments(data as any);
-    setLoading(false);
-  };
+  const toast = useToast();
 
   const handlePublish = async () => {
     if ((!newContent.trim() && uploadFiles.length === 0) || !user) return;
@@ -281,16 +408,15 @@ export default function LogsPage() {
     try {
       const uploadedUrls: string[] = [];
       for (const file of uploadFiles) {
-        // 验证文件类型和大小
         const validation = validateImageFile(file);
         if (!validation.valid) {
-          alert(validation.error);
+          toast.error(validation.error || '文件验证失败');
           setIsPublishing(false);
           return;
         }
         
         const fileExt = file.name.split('.').pop();
-        const fileName = `logs/${user.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        const fileName = `logs/${user.id}/${Date.now()}_${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
         const { error: uploadErr } = await supabase.storage.from('avatars').upload(fileName, file); 
         if (!uploadErr) {
           const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
@@ -314,164 +440,394 @@ export default function LogsPage() {
 
       if (error) throw error;
 
+      toast.success('发布成功！');
       setNewContent('');
       setUploadFiles([]);
-      fetchMoments();
+      setIsFocused(false);
+      onPublish();
     } catch (err) {
       console.error(err);
-      alert('发布失败，请稍后重试');
+      toast.error('发布失败，请稍后重试');
     } finally {
       setIsPublishing(false);
     }
   };
 
-  const handleLike = async (id: number, currentLikes: number) => {
-    // 检查是否已点赞
-    if (hasLiked(id)) {
-      return;
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }} 
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl border shadow-lg transition-all duration-300",
+        isFocused 
+          ? "border-[var(--accent-color)] shadow-[var(--accent-color)]/10" 
+          : "border-[var(--border-color)]"
+      )}
+    >
+      <div className="p-5">
+        <div className="flex gap-4">
+          {/* 头像 */}
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 p-0.5 shadow-md flex-shrink-0">
+            <img 
+              src={user?.user_metadata?.avatar_url || '/default-avatar.png'} 
+              className="w-full h-full object-cover rounded-[12px] bg-[var(--bg-secondary)]" 
+            />
+          </div>
+          
+          {/* 输入区 */}
+          <div className="flex-1">
+            <textarea 
+              value={newContent} 
+              onChange={(e) => setNewContent(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              placeholder="分享此刻的想法..." 
+              className={cn(
+                "w-full bg-transparent resize-none outline-none text-[var(--text-primary)] placeholder:text-[var(--text-muted)] text-base leading-relaxed transition-all",
+                isFocused ? "h-24" : "h-12"
+              )}
+            />
+            
+            {/* 图片预览 */}
+            <AnimatePresence>
+              {uploadFiles.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide"
+                >
+                  {uploadFiles.map((file, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden group ring-2 ring-[var(--border-color)]"
+                    >
+                      <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => setUploadFiles(files => files.filter((_, idx) => idx !== i))} 
+                        className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                      >
+                        <X size={16} />
+                      </button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+      
+      {/* 工具栏 */}
+      <div className="flex justify-between items-center px-5 py-3 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]/30 rounded-b-3xl">
+        <div className="flex gap-1">
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            className="p-2.5 hover:bg-[var(--accent-color)]/10 text-[var(--accent-color)] rounded-xl transition-colors"
+            title="添加图片"
+          >
+            <ImageIcon size={20} />
+          </button>
+          <input 
+            type="file" 
+            multiple 
+            accept="image/jpeg,image/png,image/gif,image/webp" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={(e) => { 
+              const files = e.target.files; 
+              if (files) {
+                const validFiles = Array.from(files).filter(file => {
+                  const validation = validateImageFile(file);
+                  if (!validation.valid) {
+                    toast.error(validation.error || '文件验证失败');
+                    return false;
+                  }
+                  return true;
+                });
+                setUploadFiles(prev => [...prev, ...validFiles]);
+              }
+            }} 
+          />
+        </div>
+        
+        <motion.button 
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handlePublish} 
+          disabled={isPublishing || (!newContent.trim() && uploadFiles.length === 0)} 
+          className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+        >
+          {isPublishing ? (
+            <Loader2 size={16} className="animate-spin"/>
+          ) : (
+            <>
+              <Sparkles size={16} />
+              <span>发布动态</span>
+            </>
+          )}
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+};
+
+
+// --- 组件: 页面头部 Banner (美化版) ---
+const LogsBanner = ({ user, momentCount }: { user: any, momentCount: number }) => (
+  <div className="relative -mx-6 lg:-mx-10 -mt-12 mb-10">
+    {/* 背景 */}
+    <div className="h-72 lg:h-80 bg-gradient-to-br from-purple-600 via-indigo-600 to-cyan-500 overflow-hidden">
+      {/* 装饰图案 */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="absolute top-10 right-10 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-10 w-96 h-96 bg-cyan-400/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+      
+      {/* 浮动装饰 */}
+      <motion.div 
+        animate={{ y: [0, -20, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-20 right-[20%] text-white/20"
+      >
+        <Sparkles size={40} />
+      </motion.div>
+      <motion.div 
+        animate={{ y: [0, 15, 0] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        className="absolute bottom-32 left-[15%] text-white/15"
+      >
+        <Calendar size={32} />
+      </motion.div>
+    </div>
+    
+    {/* 底部渐变 */}
+    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
+    
+    {/* 内容 */}
+    <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
+      <div className="max-w-4xl mx-auto flex items-end gap-6">
+        {/* 头像 */}
+        <motion.div 
+          initial={{ scale: 0.8, rotate: -10 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 200 }}
+          className="relative"
+        >
+          <div className="w-24 h-24 lg:w-28 lg:h-28 rounded-3xl bg-gradient-to-br from-white/90 to-white/70 p-1 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
+            <img 
+              src={user?.user_metadata?.avatar_url || '/default-avatar.png'} 
+              alt="avatar" 
+              className="w-full h-full object-cover rounded-[20px] bg-[var(--bg-secondary)]" 
+            />
+          </div>
+          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-[var(--bg-primary)] flex items-center justify-center">
+            <span className="text-white text-xs">✓</span>
+          </div>
+        </motion.div>
+        
+        {/* 标题 */}
+        <div className="mb-2">
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl lg:text-4xl font-black text-[var(--text-primary)] mb-2"
+          >
+            我的动态
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-[var(--text-secondary)] flex items-center gap-3"
+          >
+            <span>记录生活的点滴时光</span>
+            <span className="px-3 py-1 bg-[var(--bg-card)] rounded-full text-xs font-bold text-[var(--accent-color)]">
+              {momentCount} 条动态
+            </span>
+          </motion.p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// --- 主页面 ---
+export default function LogsPage() {
+  const [user, setUser] = useState<any>(null);
+  const [moments, setMoments] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+  
+  // 交互状态
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [activeCommentId, setActiveCommentId] = useState<number | null>(null);
+  const [bookmarkStatuses, setBookmarkStatuses] = useState<Record<number, boolean>>({});
+  const [likeStatuses, setLikeStatuses] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+      fetchMoments();
+    };
+    init();
+  }, []);
+
+  // 批量加载收藏和点赞状态
+  useEffect(() => {
+    async function loadStatuses() {
+      if (moments.length === 0) return;
+      
+      const postIds = moments.map(m => m.id);
+      
+      const likes = await checkLikedBatch(postIds, user?.id);
+      setLikeStatuses(prev => ({ ...prev, ...likes }));
+      
+      if (user?.id) {
+        const bookmarks = await getBookmarkStatuses(user.id, postIds);
+        setBookmarkStatuses(prev => ({ ...prev, ...bookmarks }));
+      }
     }
+    
+    loadStatuses();
+  }, [user?.id, moments]);
+
+  const fetchMoments = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`*, profiles:user_id ( avatar_url, username )`)
+      .eq('type', 'moment')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      toast.error('加载动态失败');
+    } else if (data) {
+      setMoments(data as any);
+    }
+    setLoading(false);
+  }, [toast]);
+
+  const handleLike = async (id: number, currentLikes: number) => {
+    if (likeStatuses[id]) return;
     
     const newLikes = currentLikes + 1;
     setMoments(prev => prev.map(m => m.id === id ? { ...m, likes: newLikes } : m));
-    markAsLiked(id);
-    await supabase.from('posts').update({ likes: newLikes }).eq('id', id);
+    setLikeStatuses(prev => ({ ...prev, [id]: true }));
+    
+    const result = await likePost(id, user?.id);
+    if (!result.success) {
+      setMoments(prev => prev.map(m => m.id === id ? { ...m, likes: currentLikes } : m));
+      setLikeStatuses(prev => ({ ...prev, [id]: false }));
+    }
   };
 
-  return (
-    <div className="flex bg-[var(--bg-primary)] min-h-screen">
-      <Sidebar />
-      
-      <main className="flex-1 lg:ml-64 transition-all duration-300">
-        {/* Banner */}
-        <div className="relative h-64 lg:h-80 bg-slate-800 overflow-hidden group">
-          <img src="https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?q=80&w=2670&auto=format&fit=crop" alt="header" className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-[20s]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10 flex items-end gap-6 max-w-4xl mx-auto">
-             <div className="relative w-24 h-24 rounded-2xl bg-[var(--bg-card)] backdrop-blur-md p-1 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-300">
-               <img src={user?.user_metadata?.avatar_url || '/default-avatar.png'} alt="me" className="w-full h-full object-cover rounded-xl bg-[var(--bg-secondary)]" />
-             </div>
-             <div className="mb-4">
-                <h1 className="text-3xl font-bold text-[var(--text-primary)] mix-blend-hard-light">我的动态</h1>
-                <p className="text-[var(--text-secondary)] font-medium">记录赛博空间的时间碎片</p>
-             </div>
-          </div>
-        </div>
+  // 按日期分组
+  const groupedMoments = moments.reduce((groups, moment) => {
+    const date = formatDateGroup(new Date(moment.created_at));
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(moment);
+    return groups;
+  }, {} as Record<string, Post[]>);
 
-        {/* 主内容 */}
-        <div className="max-w-3xl mx-auto px-4 lg:px-8 py-8 -mt-8 relative z-10">
-          {user && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-[var(--bg-card)] backdrop-blur-xl rounded-3xl p-5 shadow-sm border border-[var(--border-color)] mb-10">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="分享当下的想法..." className="w-full h-20 bg-transparent resize-none outline-none text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] text-base" />
-                  {uploadFiles.length > 0 && (
-                    <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
-                      {uploadFiles.map((file, i) => (
-                        <div key={i} className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden group">
-                          <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
-                          <button onClick={() => setUploadFiles(files => files.filter((_, idx) => idx !== i))} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"><X size={14} /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center pt-3 border-t border-slate-100">
-                    <div className="flex gap-2">
-                      <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-purple-50 text-purple-600 rounded-full transition-colors"><ImageIcon size={20} /></button>
-                      <input 
-                        type="file" 
-                        multiple 
-                        accept="image/jpeg,image/png,image/gif,image/webp" 
-                        className="hidden" 
-                        ref={fileInputRef} 
-                        onChange={(e) => { 
-                          const files = e.target.files; 
-                          if (files) {
-                            const validFiles = Array.from(files).filter(file => {
-                              const validation = validateImageFile(file);
-                              if (!validation.valid) {
-                                alert(validation.error);
-                                return false;
-                              }
-                              return true;
-                            });
-                            setUploadFiles(prev => [...prev, ...validFiles]);
-                          }
-                        }} 
-                      />
-                    </div>
-                    <button onClick={handlePublish} disabled={isPublishing || (!newContent && uploadFiles.length === 0)} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-purple-900/10 hover:shadow-purple-900/20 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {isPublishing ? <Loader2 size={16} className="animate-spin"/> : <Send size={16} />} <span>发布</span>
-                    </button>
+  return (
+    <>
+      <PageLayout maxWidth="3xl" className="pt-0">
+        <LogsBanner user={user} momentCount={moments.length} />
+        
+        {/* 发布框 */}
+        {user && (
+          <div className="mb-10">
+            <PublishBox user={user} onPublish={fetchMoments} />
+          </div>
+        )}
+
+        {/* 动态列表 - 时间线样式 */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-10 h-10 animate-spin text-[var(--accent-color)] mb-4"/>
+            <p className="text-[var(--text-muted)]">加载中...</p>
+          </div>
+        ) : moments.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center">
+              <Sparkles size={32} className="text-[var(--text-muted)]" />
+            </div>
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">还没有动态</h3>
+            <p className="text-[var(--text-muted)]">发布你的第一条动态吧~</p>
+          </div>
+        ) : (
+          <div className="relative">
+            {/* 时间线 */}
+            <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-[var(--accent-color)] via-[var(--border-color)] to-transparent hidden lg:block" style={{ left: '-25px' }} />
+            
+            {Object.entries(groupedMoments).map(([date, posts]) => (
+              <div key={date} className="mb-10">
+                {/* 日期标签 */}
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  className="flex items-center gap-3 mb-6"
+                >
+                  <div className="hidden lg:flex items-center justify-center w-10 h-10 rounded-full bg-[var(--accent-color)] text-white text-xs font-bold -ml-[45px] z-10">
+                    <Calendar size={16} />
                   </div>
+                  <span className="px-4 py-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-full text-sm font-bold text-[var(--text-primary)] shadow-sm">
+                    {date}
+                  </span>
+                </motion.div>
+                
+                {/* 该日期下的动态 */}
+                <div className="space-y-6 lg:pl-0">
+                  {posts.map((post) => (
+                    <MomentCard
+                      key={post.id}
+                      post={post}
+                      user={user}
+                      likeStatus={likeStatuses[post.id] || false}
+                      bookmarkStatus={bookmarkStatuses[post.id] || false}
+                      isCommentOpen={activeCommentId === post.id}
+                      onLike={() => handleLike(post.id, post.likes)}
+                      onToggleComment={() => setActiveCommentId(activeCommentId === post.id ? null : post.id)}
+                      onImageClick={setLightboxSrc}
+                    />
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          )}
-
-          <div className="space-y-8">
-            {loading ? <div className="text-center py-20 text-[var(--text-muted)]"><Loader2 className="w-8 h-8 animate-spin mx-auto"/></div> : moments.map((post) => {
-              const { text, images } = extractImages(post.content);
-              return (
-                <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} key={post.id} className="bg-[var(--bg-secondary)] rounded-3xl p-6 shadow-sm border border-[var(--border-color)]">
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-full bg-[var(--bg-tertiary)] flex-shrink-0 overflow-hidden">
-                      <img src={post.profiles?.avatar_url || '/default-avatar.png'} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between mb-1">
-                        <h3 className="font-bold text-[var(--text-primary)]">{post.profiles?.username || '未知用户'}</h3>
-                        <span className="text-xs text-[var(--text-muted)] font-mono">{format(new Date(post.created_at), 'MM-dd HH:mm')}</span>
-                      </div>
-                      <div className="prose prose-slate dark:prose-invert prose-sm max-w-none text-[var(--text-secondary)] mb-3"><ReactMarkdown>{text}</ReactMarkdown></div>
-                      <ImageGrid images={images} onImageClick={setLightboxSrc} />
-                      
-                      <div className="mt-4 flex items-center gap-6 border-t border-[var(--border-color)] pt-3">
-                        <button 
-                          onClick={() => handleLike(post.id, post.likes)} 
-                          disabled={hasLiked(post.id)}
-                          className={`group flex items-center gap-1.5 transition-colors ${hasLiked(post.id) ? 'text-pink-500 cursor-default' : 'text-slate-400 hover:text-pink-500'}`}
-                        >
-                          <div className="p-2 rounded-full group-hover:bg-pink-50 transition-colors"><Heart size={18} className={cn((hasLiked(post.id) || post.likes > 0) && "fill-pink-500 text-pink-500")} /></div>
-                          <span className="text-sm font-medium">{post.likes || '赞'}</span>
-                        </button>
-                        
-                        <button onClick={() => setActiveCommentId(activeCommentId === post.id ? null : post.id)} className={cn("group flex items-center gap-1.5 transition-colors", activeCommentId === post.id ? "text-purple-600" : "text-slate-400 hover:text-purple-600")}>
-                          <div className={cn("p-2 rounded-full transition-colors", activeCommentId === post.id ? "bg-purple-50" : "group-hover:bg-purple-50")}><MessageSquare size={18} className={cn(activeCommentId === post.id && "fill-purple-600 text-purple-600")}/></div>
-                          <span className="text-sm font-medium">评论</span>
-                        </button>
-                        
-                        {/* 收藏按钮 */}
-                        <BookmarkButton 
-                          postId={post.id} 
-                          initialBookmarked={bookmarkStatuses[post.id] || false}
-                          size="sm"
-                        />
-                      </div>
-
-                      <AnimatePresence>
-                        {activeCommentId === post.id && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <CommentSection postId={post.id} postAuthorId={post.user_id} currentUser={user} />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+            ))}
           </div>
-        </div>
-      </main>
+        )}
+      </PageLayout>
 
+      {/* 图片灯箱 */}
       <AnimatePresence>
         {lightboxSrc && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setLightboxSrc(null)}>
-            <button className="absolute top-5 right-5 text-white/70 hover:text-white p-2"><X size={32} /></button>
-            <motion.img initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} src={lightboxSrc} className="max-w-full max-h-full object-contain rounded shadow-2xl" onClick={(e) => e.stopPropagation()} />
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md" 
+            onClick={() => setLightboxSrc(null)}
+          >
+            <button className="absolute top-6 right-6 text-white/70 hover:text-white p-3 hover:bg-white/10 rounded-full transition-colors">
+              <X size={28} />
+            </button>
+            <motion.img 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }} 
+              src={lightboxSrc} 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" 
+              onClick={(e) => e.stopPropagation()} 
+            />
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
